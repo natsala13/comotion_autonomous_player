@@ -1,0 +1,9 @@
+scene:
+  scenes/example_scene.json
+players:
+  - module: coMotion.game.comotion_player
+    class: CoMotion_RandomPRMPlayer
+    args: [1000, 15]
+  - module: coMotion.game.comotion_player
+    class: CoMotion_RandomPRMPlayer
+    args: [1000, 15]
