@@ -4,7 +4,7 @@ import numpy as np
 import networkx as nx
 import sklearn.neighbors
 
-from prm import Prm
+from coMotion.autonomous_player.algorithms.prm import Prm
 from bindings import Segment_2
 from coMotion.game.comotion_player import CoMotion_Player
 import geometry_utils.collision_detection as collision_detection
@@ -24,6 +24,7 @@ class BasicPlayer(CoMotion_Player):
         self.prm = Prm(self.game, self.robots, k_nearest)
         self.k_nearest = int(k_nearest)
         self.num_landmarks = int(num_landmarks)
+        # game is inited once attach game is called. I would prefer it here on init...
 
     def preprocess(self):
         self.prm.create_graph(self.num_landmarks)

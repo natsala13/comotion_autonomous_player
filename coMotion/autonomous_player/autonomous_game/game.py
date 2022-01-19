@@ -49,27 +49,6 @@ class Game:
         return cls(red_player, blue_player, scene_config, writer)
 
     def init_game(self, gui=None):
-
-        # class ToolkitGUIApp(QtWidgets.QMainWindow, ToolkitGUI):
-        #     def __init__(self, parent=None):
-        #         super().__init__(parent)
-        #         self.setupUi(self)
-        #
-        #     def run_command(self, cmd):
-        #         subprocess.Popen(cmd, shell=True, stdin=None, stdout=None, stderr=None, close_fds=True)
-        #
-        # app = QtWidgets.QApplication(sys.argv)
-        # gui = ToolkitGUIApp()
-        # gui.show()
-        # sys.exit(app.exec_())
-        #
-        # gui = GameGUI()
-        # gui.mainWindow.show()
-        #
-        # self.game_display = CoMotion_DiscoPygal(gui)
-        # self.game_display.connect_game(self.game)
-        # import ipdb;ipdb.set_trace()
-
         self.red_player.attach_game(self.game)
         self.blue_player.attach_game(self.game)
 
