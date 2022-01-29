@@ -1,7 +1,7 @@
 """
 Usage:
     experiment.py test [-s] [--filename=test] [--config=CONFIGFILE]
-    experiment.py graph --results=FILENAME [-p]
+    experiment.py graph [--config=CONFIGFILE] [--samples=NUM]
     experiment.py run [--config=CONFIGFILE] [--samples=NUM]
 
 Options:
@@ -19,6 +19,7 @@ from coMotion.read_input import read_scene
 from coMotion.autonomous_player.autonomous_game.game import Game
 from coMotion.autonomous_player.algorithms.prm import Prm
 from coMotion.autonomous_player.plotter.plotter import Plotter
+from coMotion.autonomous_player.heuristic.basic_heuristic import BonusDistanceHeuristic
 import geometry_utils.collision_detection as collision_detection
 
 
@@ -34,7 +35,7 @@ def run_test_with_config(config):
     raise NotImplementedError('Run tests not implemented yet...')
 
 
-def single_run(config, smaples=300):
+def run_and_plot_prm(config, smaples):
     scene_config = read_scene(config['scene'])
     obstacles = scene_config['obstacles']
     radius = scene_config['radius']
@@ -43,12 +44,22 @@ def single_run(config, smaples=300):
     prm = Prm(obstacles, scene_config['blue_robots'], 3, Prm.l2_norm, obstacles_cd)
     prm.create_graph(smaples)
 
-    plotter = Plotter()
-    plotter.plot_prm_graph(prm)
+    game = Game.init_from_config(config)
+    heuristic = BonusDistanceHeuristic(game.game)
+    colors = [heuristic.score([p]) for p in prm.sampled_points]
 
-    # game = Game.init_from_config(config)
-    # game.init_game()
-    # game.play_game()
+    plotter = Plotter()
+    plotter.plot_prm_graph(prm, show=True, colors=colors)
+
+    # first_node = list(prm)[0]
+    # distances, paths = prm.find_all_possible_configuration_up_to_length(first_node)
+    # plotter.plot_dijkestra_path(paths)
+
+
+def single_run(config, smaples=300):
+    game = Game.init_from_config(config)
+    game.init_game()
+    game.play_game()
 
 
 if __name__ == "__main__":
@@ -58,7 +69,7 @@ if __name__ == "__main__":
     if args['test']:
         run_test_with_config(configurations)
     if args['graph']:
-        raise NotImplementedError('graph option os not implemented yet')
+        run_and_plot_prm(configurations, int(args['--samples']))
     if args['run']:
         # import ipdb;ipdb.set_trace()
         # scene_filenmae = f'coMotion/scenes/{args["--scene"]}'
