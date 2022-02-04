@@ -3,7 +3,12 @@ scene:
 players:
   - module: coMotion.autonomous_player.players.basic_player
     class: BasicPlayer
-    args: [1000, 15]
+    args:
+        num_samples: 500
+        k_nearest: 15
+        heuristic_class: BonusDistanceHeuristic
   - module: coMotion.game.comotion_player
     class: CoMotion_RandomPRMPlayer
-    args: [1000, 15]
+    args:
+        num_landmarks: 1000
+        K: 15

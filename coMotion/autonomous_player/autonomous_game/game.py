@@ -32,7 +32,7 @@ class Game:
     @classmethod
     def init_player(cls, player_config: dict, player_id: int, robots: list, robot_radius: int):
         module = importlib.import_module(player_config['module'])
-        player = getattr(module, player_config['class'])(player_id, *player_config['args'])
+        player = getattr(module, player_config['class'])(player_id, **player_config['args'])
 
         comotion_robots = [CoMotion_Robot(robot, robot_radius, player) for robot in robots]
         player.add_robots(comotion_robots)

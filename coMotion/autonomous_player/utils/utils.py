@@ -35,3 +35,5 @@ class Segment:
         return Segment_2(self.src.comotion_point, self.dst.comotion_point)
 
 
+def l2_norm(p, q):
+    return ((p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2) ** 0.5

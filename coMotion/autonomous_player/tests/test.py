@@ -12,15 +12,17 @@ Options:
     --scene=FILENAME                Scene filename.
     --config=CONFIGFILE             Config file path [default: "experiment.json"]
 """
+import matplotlib.pyplot as plt
 import yaml
 from docopt import docopt
 
 from coMotion.read_input import read_scene
-from coMotion.autonomous_player.autonomous_game.game import Game
 from coMotion.autonomous_player.algorithms.prm import Prm
 from coMotion.autonomous_player.plotter.plotter import Plotter
-from coMotion.autonomous_player.heuristic.basic_heuristic import BonusDistanceHeuristic
+from coMotion.autonomous_player.utils import utils
 import geometry_utils.collision_detection as collision_detection
+from coMotion.autonomous_player.autonomous_game.game import Game
+from coMotion.autonomous_player.heuristic.basic_heuristic import BonusDistanceHeuristic, BonusSmartDistanceHeuristic
 
 
 def load_config(config_file: str) -> dict:
@@ -41,11 +43,12 @@ def run_and_plot_prm(config, smaples):
     radius = scene_config['radius']
     obstacles_cd = collision_detection.Collision_detector(obstacles, [], radius)
 
-    prm = Prm(obstacles, scene_config['blue_robots'], 3, Prm.l2_norm, obstacles_cd)
+    prm = Prm(obstacles, scene_config['red_robots'], 3, utils.l2_norm, obstacles_cd)
     prm.create_graph(smaples)
 
     game = Game.init_from_config(config)
-    heuristic = BonusDistanceHeuristic(game.game)
+    heuristic = BonusSmartDistanceHeuristic(game.game)
+
     colors = [heuristic.score([p]) for p in prm.sampled_points]
 
     plotter = Plotter()

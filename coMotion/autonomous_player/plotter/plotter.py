@@ -18,12 +18,15 @@ class Plotter:
         plt.title(f'prm all sampled {len(prm.sampled_points)} points...')
         print(f'prm all sampled {len(prm.sampled_points)} points...')
 
-        x = [p[0] for p in prm.sampled_points]
-        y = [p[1] for p in prm.sampled_points]
+        x = [p[0] for p in prm.graph.nodes()]
+        y = [p[1] for p in prm.graph.nodes()]
 
-        colors = [np.log(c) for c in colors]
-        colors = normalise_values(colors)
-        plt.scatter(x, y, c=colors, cmap='gist_rainbow')
+        if colors:
+            colors = [np.log(c) for c in colors]
+            colors = normalise_values(colors)
+            plt.scatter(x, y, c=colors, cmap='gist_rainbow')
+        else:
+            plt.scatter(x, y, cmap='gist_rainbow')
 
         # for point in prm.sampled_points:
         #     plt.scatter(point[0], point[1])
@@ -32,9 +35,9 @@ class Plotter:
             plt.colorbar()
             plt.show()
 
-        plt.figure()
-        plt.hist(colors, bins=50)
-        plt.show()
+        # plt.figure()
+        # plt.hist(colors, bins=50)
+        # plt.show()
 
     @staticmethod
     def plot_dijkestra_path(paths: list, show: bool = True):
@@ -55,7 +58,7 @@ class Plotter:
                     new_values[node[0]] = np.mean([values[g] for g in values if g[0] == node[0]])
             return new_values
 
-        print('Scatter all heuristic paths')
+        print(f'Scatter all heuristic paths - {len(paths)}')
         paths = drop_redundant_values(paths)
 
         colors = [np.log(c) for c in paths.values()]
@@ -65,9 +68,6 @@ class Plotter:
         x = [node[0] for node in paths]
         y = [node[1] for node in paths]
         plt.scatter(x, y, c=colors, alpha=alphas, cmap='gist_rainbow')
-        # for node, heuristic in zip(paths, normalised_heuristics):
-        #     print(f'point x - {node[0]}, y - {node[1]}, color - {heuristic}')
-        #     plt.scatter(node[0], node[1], c=random.uniform(0, 256), cmap='prism')
 
         plt.colorbar()
         plt.show()

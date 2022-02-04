@@ -1,17 +1,19 @@
-import random
 import time
+import random
+import importlib
 
 import numpy as np
 import networkx as nx
 import sklearn.neighbors
 
 from bindings import Segment_2, Point_2
-from coMotion.autonomous_player.algorithms.prm import Prm
+from coMotion.autonomous_player.utils import utils
 from coMotion.game.comotion_player import CoMotion_Player
+from coMotion.autonomous_player.algorithms.prm import Prm
+from coMotion.autonomous_player.plotter.plotter import Plotter
 import geometry_utils.collision_detection as collision_detection
 from coMotion.autonomous_player.utils.utils import Point, Segment
-from coMotion.autonomous_player.plotter.plotter import Plotter
-from coMotion.autonomous_player.heuristic.basic_heuristic import RandomHeuristic, BonusDistanceHeuristic
+from coMotion.autonomous_player.heuristic import basic_heuristic
 
 
 class BasicPlayer(CoMotion_Player):
@@ -20,23 +22,23 @@ class BasicPlayer(CoMotion_Player):
     This is meant only as a test/example to how true logic should work.
     """
 
-    def __init__(self, player_id, num_landmarks, k_nearest):
+    def __init__(self, player_id, num_samples, k_nearest=15, heuristic_class='BonusDistanceHeuristic'):
         super().__init__(player_id)
 
         # Store a (static) probabilistic roadmap of the scene
         # Also all robot locations are vertices in the roadmap
         self.prm = None
         self.k_nearest = int(k_nearest)
-        self.num_landmarks = int(num_landmarks)
+        self.num_landmarks = int(num_samples)
         # game is inited once attach game is called. I would prefer it here on init...
 
-        # self.heuristic = RandomHeuristic(self.game)
+        self.heuristic_class = getattr(basic_heuristic, heuristic_class)
         self.heuristic = None
 
     def preprocess(self):
-        self.heuristic = BonusDistanceHeuristic(self.game)
+        self.heuristic = self.heuristic_class(self.game)
         obstacles_cd = collision_detection.Collision_detector(self.game.obstacles, [], self.game.radius)
-        self.prm = Prm(self.game.obstacles, self.robots, self.k_nearest, Prm.l2_norm, obstacles_cd)
+        self.prm = Prm(self.game.obstacles, self.robots, self.k_nearest, utils.l2_norm, obstacles_cd)
         self.prm.create_graph(self.num_landmarks)
 
     @staticmethod
@@ -56,6 +58,7 @@ class BasicPlayer(CoMotion_Player):
 
     def get_turn_robot_paths(self) -> dict:
         """Apparently I should return a dict of paths..."""
+        start_time = time.time()
         self.heuristic.update_before_turn()
         robots_locations = tuple(
             (robot.location.x().to_double(), robot.location.y().to_double()) for robot in self.robots)
@@ -64,15 +67,23 @@ class BasicPlayer(CoMotion_Player):
 
         self.prm.add_team_robots_location(robots_locations)
         self.prm.remove_opponent_robots_location(opponent_robots)
+        print(f'### preprocessing bullshit - {time.time() - start_time}')
 
         best_paths = self.prm.find_all_couple_of_paths(robots_locations, self.game.makespan)
 
+        print(f'### All couples - {time.time() - start_time}')
+
         self.prm.re_add_opponent_robots_locations()
 
+        print(f'Re add robot locations- {time.time() - start_time}')
+
         heuristics = {node: self.heuristic.score(node) for node in best_paths}
+
+        print(f'### heuristics - {time.time() - start_time}')
+
         sorted_nodes = sorted(heuristics, key=lambda n: heuristics[n])
 
-        # heuristics = {k: heuristics[k] for k in sorted_nodes}
+        print(f'### Sort - {time.time() - start_time}')
         plotter = Plotter()
         plotter.plot_prm_heat_map(heuristics)
 
@@ -80,59 +91,9 @@ class BasicPlayer(CoMotion_Player):
         paths = {robot: self.point_list_to_segment_list(path) for robot, path in
                  zip(self.robots[:2], best_paths[best_node])}
 
-        # import ipdb;ipdb.set_trace()
-
         paths[self.robots[2]] = [Segment_2(self.robots[2].location, self.robots[2].location)]
         self.equalise_paths_length(paths)
 
-        return paths
-
-    def _advance_one_step(self):
-        # Advance all robots in one random step, and return the total makespan
-        makespan = 0
-        steps = {}
-
-        for robot in self.robots:
-            neighbors = self.prm[robot.location]  # all possible next steps.
-            random_next = random.choice(list(neighbors.keys()))  # choose one randomally
-
-            weight = neighbors[random_next]['weight']  # next random step weight.
-            edge = Segment_2(robot.location, random_next)  # corresponding edge.
-
-            # All chosen paths from before plus the new one.
-            parallel_edges = [edge] + [steps[other_robot] for other_robot in steps]
-
-            other_team_edges = [Segment_2(oponent_robot.location, oponent_robot.location) for oponent_robot in
-                                self.game.other_player.robots]  # oponent player robot new locations.
-
-            total_robot_edges = parallel_edges + other_team_edges
-            if collision_detection.check_intersection_against_robots(total_robot_edges,
-                                                                     [robot.radius] * len(total_robot_edges)):
-                print('Intersection between robots detected...')
-                steps[robot] = Segment_2(robot.location, robot.location)  # stay in place
-            else:
-                steps[robot] = edge
-                makespan += weight
-                robot.location = random_next  # Typically dangerous, but we return all robots back to place in the end
-
-        return steps, makespan
-
-    def _get_turn_robot_paths(self):
-        total_makespan = 0
-        paths = {robot: [] for robot in self.robots}
-
-        original_locations = {robot: robot.location for robot in self.robots}
-
-        while True:
-            steps, makespan = self.advance_one_step()
-            if total_makespan + makespan >= self.game.makespan:
-                break
-            total_makespan += makespan
-            for robot in steps:
-                paths[robot].append(steps[robot])
-
-        # restore original locations
-        for robot in original_locations:
-            robot.location = original_locations[robot]
+        print(f'### End- {time.time() - start_time}')
 
         return paths

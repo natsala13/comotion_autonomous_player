@@ -9,6 +9,7 @@ from sklearn.neighbors import NearestNeighbors
 
 from bindings import Point_2, Segment_2
 from coMotion.game.comotion_game import CoMotion_Game
+from coMotion.autonomous_player.utils import utils
 import geometry_utils.collision_detection as collision_detection
 from coMotion.autonomous_player.utils.utils import Point, Segment
 from coMotion.game.comotion_player import CoMotion_Robot as Robot
@@ -24,7 +25,7 @@ class Prm:
         self.graph = nx.Graph()
         self.sampled_points: [Point] = []
         self.knn = NearestNeighbors(n_neighbors=self.k_nearest,
-                                    metric=self.l2_norm,
+                                    metric=utils.l2_norm,
                                     algorithm='auto')
 
         self.norm = norm
@@ -36,14 +37,6 @@ class Prm:
 
     def __getitem__(self, item):
         return self.graph[item]
-
-    @staticmethod
-    def l2_norm(p, q):
-        return ((p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2) ** 0.5
-
-    @staticmethod
-    def l2_norm_square(p, q):
-        return (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2
 
     def sample_points(self, x_range, y_range, num_landmarks: int) -> [Point]:
         """Sample num_landmarks points outside of obstacles"""
@@ -120,15 +113,17 @@ class Prm:
 
     def remove_opponent_robots_location(self, robots: [Point]):
         """remove from prm opponent robot location so we won't collide."""
-        # TODO: Change k to robot's radius.
-        k_neighbors_indexes = [self.knn.kneighbors([tuple(robot)], return_distance=False)[0] for robot in robots]
-        k_neighbors_indexes = self.flatten(k_neighbors_indexes)
-        k_neighbors = [self.sampled_points[i] for i in k_neighbors_indexes]
+        my_radius = 2  # TODO: Change my_radius to robot's radius.
+        # k_neighbors_indexes = [self.knn.kneighbors([tuple(robot)], return_distance=False)[0] for robot in robots]
+        # k_neighbors_indexes = self.flatten(k_neighbors_indexes)
+        # k_neighbors = [self.sampled_points[i] for i in k_neighbors_indexes]
+        robots_points = [point for point in self.sampled_points if
+                         any([utils.l2_norm(robot, point) < my_radius for robot in robots])]
 
-        self.opponent_edges = self.flatten([self.graph.edges(neighbor) for neighbor in k_neighbors])
-        self.opponent_nodes = k_neighbors
+        self.opponent_edges = self.flatten([self.graph.edges(neighbor) for neighbor in robots_points])
+        self.opponent_nodes = robots_points
 
-        self.graph.remove_nodes_from(k_neighbors)
+        self.graph.remove_nodes_from(robots_points)
 
     def re_add_opponent_robots_locations(self):
         self.graph.add_nodes_from(self.opponent_nodes)
