@@ -56,6 +56,10 @@ class FocusedPlayer(BasicPlayer):
 
         valid_states = [(state_sum, state) for state_sum, state in zip(sum_states, all_endpoints) if
                         state_sum < makespan]
+        # TODO: remove statue_sum I don't want that except knowing whether or not the state is valid
+        # TODO: Fix all invalid states ? Maybe it would be a shame to let them go.
+        # TODO: heuristic every state and chose the maximum one
+        # TODO: heuristic should take in account the goal's type the robot's distance from here and number of turns left
 
 
         min_state = min(valid_states)[1]
