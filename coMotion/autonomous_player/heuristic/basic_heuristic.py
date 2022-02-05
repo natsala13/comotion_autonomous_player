@@ -29,7 +29,7 @@ class BonusDistanceHeuristic(AbstractHeuristic):
     def distance(p0, p1):
         return np.sqrt((p0[0] - p1[0]) ** 2 + (p0[1] - p1[1]) ** 2)
 
-    def score(self, robots_location):
+    def score(self, robots_location, **kwargs):
         min_distances = [min([self.distance(robot, bonus) for robot in robots_location]) for bonus in self.bonuses]
         return sum(min_distances)
 
@@ -59,9 +59,11 @@ class BonusSmartDistanceHeuristic(BonusDistanceHeuristic):
         return min([sum([self.distance(robot, bonus) for robot, bonus in zip(robots, bonus_permutations)]) for
                     bonus_permutations in itertools.permutations(bonuses, len_permutations)])
 
-    def score(self, robots_location):
+    def score(self, robots_location, **kwargs):
         return self.pseudo_closest_match(robots_location, self.bonuses)
 
 
 class BonusAndCirclesDistanceHeuristic(BonusDistanceHeuristic):
-    pass
+    def score(self, robot_bonuses_distances, goals=[], turns_left=3, **kwargs):
+        return sum(robot_bonuses_distances)
+

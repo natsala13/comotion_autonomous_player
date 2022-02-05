@@ -86,13 +86,14 @@ class Prm:
 
         return edges
 
-    def create_graph(self, num_landmarks: int):
+    def create_graph(self, num_landmarks: int, fix_points=[]):
         # Compute the scene bounding box and sampling range
         bbox = collision_detection.calc_bbox(self.obstacles)
         x_range = (bbox[0].to_double(), bbox[1].to_double())
         y_range = (bbox[2].to_double(), bbox[3].to_double())
 
         self.sampled_points = self.sample_points(x_range, y_range, num_landmarks)
+        self.sampled_points += fix_points
         self.knn.fit(self.sampled_points)
 
         edges = self.connect_edges(self.sampled_points, self.knn)
@@ -153,7 +154,8 @@ class Prm:
         possible_paths: dict[Robot, Prm.PathCollection] = {
             robot: self.find_all_dests_up_to_length_from_source(robot, max_len) for
             robot in robots}
-        print(f'\t Run Dijkstra x3 - {time.time() - start_time}, N = {[len(possible_paths[p].distances) for p in possible_paths]}')
+        print(
+            f'\t Run Dijkstra x3 - {time.time() - start_time}, N = {[len(possible_paths[p].distances) for p in possible_paths]}')
 
         best_paths = {}
         counter, times = 0, 0

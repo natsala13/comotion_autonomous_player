@@ -1,6 +1,7 @@
 import time
 import random
 import importlib
+from functools import cached_property
 
 import numpy as np
 import networkx as nx
@@ -14,6 +15,31 @@ from coMotion.autonomous_player.plotter.plotter import Plotter
 import geometry_utils.collision_detection as collision_detection
 from coMotion.autonomous_player.utils.utils import Point, Segment
 from coMotion.autonomous_player.heuristic import basic_heuristic
+
+
+class RobotsData:
+    def __init__(self, game, robots):
+        self.game = game
+        self.my_robots = robots
+
+    @cached_property
+    def robots(self):
+        return tuple((robot.location.x().to_double(), robot.location.y().to_double()) for robot in self.my_robots)
+
+    @cached_property
+    def opponent_robots(self):
+        return tuple(
+            (robot.location.x().to_double(), robot.location.y().to_double()) for robot in self.game.other_player.robots)
+
+    @cached_property
+    def bonuses(self):
+        return tuple((bonus.location.x().to_double(), bonus.location.y().to_double()) for bonus in self.game.bonuses if
+                     not bonus.is_collected)
+
+    @cached_property
+    def end_circles(self):
+        return tuple((bonus.location.x().to_double(), bonus.location.y().to_double()) for bonus in self.game.goals)
+        # If end circle is free ?
 
 
 class BasicPlayer(CoMotion_Player):
@@ -35,11 +61,20 @@ class BasicPlayer(CoMotion_Player):
         self.heuristic_class = getattr(basic_heuristic, heuristic_class)
         self.heuristic = None
 
+        self.data: RobotsData = None
+        self.turn = 0
+
+    @property
+    def turns_left(self):
+        return self.game.max_turns - self.turn
+
     def preprocess(self):
         self.heuristic = self.heuristic_class(self.game)
         obstacles_cd = collision_detection.Collision_detector(self.game.obstacles, [], self.game.radius)
         self.prm = Prm(self.game.obstacles, self.robots, self.k_nearest, utils.l2_norm, obstacles_cd)
-        self.prm.create_graph(self.num_landmarks)
+
+        self.data = RobotsData(self.game, self.robots)
+        self.prm.create_graph(self.num_landmarks, fix_points=self.data.bonuses + self.data.end_circles)
 
     @staticmethod
     def point_list_to_segment_list(path: [Point]) -> [Segment_2]:
@@ -50,40 +85,27 @@ class BasicPlayer(CoMotion_Player):
     @staticmethod
     def equalise_paths_length(paths: dict) -> None:
         """Duplicate last node of all shortest paths so they would all have the same length"""
-        # import ipdb;ipdb.set_trace()
         max_len = max([len(paths[robot]) for robot in paths])
         for robot in paths:
             if len(paths[robot]) < max_len:
                 paths[robot] += [paths[robot][-1]] * (max_len - len(paths[robot]))
 
-    def get_turn_robot_paths(self) -> dict:
-        """Apparently I should return a dict of paths..."""
-        start_time = time.time()
-        self.heuristic.update_before_turn()
-        robots_locations = tuple(
-            (robot.location.x().to_double(), robot.location.y().to_double()) for robot in self.robots)
-        opponent_robots = tuple(
-            (robot.location.x().to_double(), robot.location.y().to_double()) for robot in self.game.other_player.robots)
+    def preprocess_turn(self) -> None:
+        """Preprocess all information before turn and return 2 list of robots"""
+        self.turn += 1
+        self.data = RobotsData(self.game, self.robots)
 
-        self.prm.add_team_robots_location(robots_locations)
-        self.prm.remove_opponent_robots_location(opponent_robots)
-        print(f'### preprocessing bullshit - {time.time() - start_time}')
+        self.prm.add_team_robots_location(self.data.robots)
+        self.prm.remove_opponent_robots_location(self.data.opponent_robots)
 
-        best_paths = self.prm.find_all_couple_of_paths(robots_locations, self.game.makespan)
-
-        print(f'### All couples - {time.time() - start_time}')
-
+    def postprocess_turn(self) -> None:
         self.prm.re_add_opponent_robots_locations()
 
-        print(f'Re add robot locations- {time.time() - start_time}')
-
+    def find_best_path(self):
+        best_paths = self.prm.find_all_couple_of_paths(self.data.robots, self.game.makespan)
         heuristics = {node: self.heuristic.score(node) for node in best_paths}
-
-        print(f'### heuristics - {time.time() - start_time}')
-
         sorted_nodes = sorted(heuristics, key=lambda n: heuristics[n])
 
-        print(f'### Sort - {time.time() - start_time}')
         plotter = Plotter()
         plotter.plot_prm_heat_map(heuristics)
 
@@ -94,6 +116,14 @@ class BasicPlayer(CoMotion_Player):
         paths[self.robots[2]] = [Segment_2(self.robots[2].location, self.robots[2].location)]
         self.equalise_paths_length(paths)
 
-        print(f'### End- {time.time() - start_time}')
+        return paths
+
+    def get_turn_robot_paths(self) -> dict:
+        """Apparently I should return a dict of paths..."""
+        self.preprocess_turn()
+
+        paths = self.find_best_path()
+
+        self.postprocess_turn()
 
         return paths

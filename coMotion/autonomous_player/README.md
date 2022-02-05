@@ -8,20 +8,23 @@
 - [x] basic heuristic player.
 - [x] remove oponent players from graph.
 - [x] Smarter heuristic to move few robots simultaneously.
-- [ ] Finish at circles
-- [ ] Fasten heuristic calculation.
+- [x] Finish at circles
+- [x] Fasten heuristic calculation.
 - [ ] Min max.
-- [ ] 3 robots moving together.
 - [ ] Monte Carlo
 - [ ] Profiling - Run time of each block etc..
 - [ ] Prm - bridge test every turn around enemy robots.
 - [ ] Prm - maybe not using as much points as possible to avoid enormous runtime later.
-- [ ] !!! Heuristic runtime
+- [x] !!! Heuristic runtime
+- [x] Measure new runtime - 0.04 sec! (Due to distance matrix)
+- [ ] Add functionality for half a target.
+- [ ] What if there are more robots than candies.
+- [ ] Path that collects few candies at once.
+- [ ] I don't wanna change the sum over all valid states, neither take the minimum one, but the maximum heuristic one.
 
 ## Questions
 * Make an 8 d prm graph? Including all robots possible locations? NO
 * How can I measure a path and not an end situation? (path eating few candies all at once?)
-* When do I worry about end circles?
 * Exact scene? is it possible to implement? NO.
 
 * Why should all robots' paths be the same?
