@@ -1,3 +1,8 @@
+numpy~=1.21.2
 
-numpy
-sklearn
+matplotlib~=3.5.1
+PyYAML~=6.0
+docopt~=0.6.2
+networkx~=2.6.3
+scikit-learn~=1.0
+PyQt5~=5.15.4
