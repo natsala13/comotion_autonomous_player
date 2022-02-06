@@ -1,0 +1,14 @@
+scene:
+  /home/nathan/tau/robotics/final_project/coMotion/coMotion/scenes/example_scene.json
+players:
+  - module: comotion_autonomous_player.players.focused_player
+    class: FocusedPlayer
+    args:
+        num_samples: 2000
+        k_nearest: 15
+        heuristic_class: BonusDistanceHeuristic
+  - module: coMotion.game.comotion_player
+    class: CoMotion_RandomPRMPlayer
+    args:
+        num_landmarks: 1000
+        K: 15

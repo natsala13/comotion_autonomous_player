@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from coMotion.autonomous_player.algorithms.prm import Prm
-from coMotion.autonomous_player.utils.utils import Point, Segment
+from autonomous_player.algorithms.prm import Prm
+from autonomous_player.utils.utils import Point, Segment
 
 
 def normalise_values(values: list, max_range=256):

@@ -1,18 +1,17 @@
-import random
 import time
+import random
 from typing import Callable
 
-import numpy as np
 import networkx as nx
 from dataclasses import dataclass
 from sklearn.neighbors import NearestNeighbors
 
 from bindings import Point_2, Segment_2
-from coMotion.game.comotion_game import CoMotion_Game
-from coMotion.autonomous_player.utils import utils
+from coMotion.game.comotion_player import CoMotion_Robot
 import geometry_utils.collision_detection as collision_detection
-from coMotion.autonomous_player.utils.utils import Point, Segment
-from coMotion.game.comotion_player import CoMotion_Robot as Robot
+
+from autonomous_player.utils import utils
+from autonomous_player.utils.utils import Point, Segment
 
 
 class Prm:
@@ -151,7 +150,7 @@ class Prm:
         Returns: A dictionary containing <tuple of two final nodes>: <tuple of paths>
         """
         start_time = time.time()
-        possible_paths: dict[Robot, Prm.PathCollection] = {
+        possible_paths: dict[CoMotion_Robot, Prm.PathCollection] = {
             robot: self.find_all_dests_up_to_length_from_source(robot, max_len) for
             robot in robots}
         print(

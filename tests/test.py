@@ -12,17 +12,18 @@ Options:
     --scene=FILENAME                Scene filename.
     --config=CONFIGFILE             Config file path [default: "experiment.json"]
 """
-import matplotlib.pyplot as plt
 import yaml
 from docopt import docopt
+import matplotlib.pyplot as plt
 
 from coMotion.read_input import read_scene
-from coMotion.autonomous_player.algorithms.prm import Prm
-from coMotion.autonomous_player.plotter.plotter import Plotter
-from coMotion.autonomous_player.utils import utils
 import geometry_utils.collision_detection as collision_detection
-from coMotion.autonomous_player.autonomous_game.game import Game
-from coMotion.autonomous_player.heuristic.basic_heuristic import BonusDistanceHeuristic, BonusSmartDistanceHeuristic
+
+from autonomous_player.utils import utils
+from autonomous_player.algorithms.prm import Prm
+from autonomous_player.plotter.plotter import Plotter
+from autonomous_player.autonomous_game.game import Game
+from autonomous_player.heuristic.basic_heuristic import BonusDistanceHeuristic, BonusSmartDistanceHeuristic
 
 
 def load_config(config_file: str) -> dict:

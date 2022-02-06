@@ -1,14 +1,9 @@
 import sys
 import time
 import importlib
-import subprocess
 from _io import TextIOWrapper
 
-from PyQt5 import QtWidgets
-
-from coMotion.game_gui import GameGUI
 from coMotion.read_input import read_scene
-from coMotion.toolkit_gui import ToolkitGUI
 from coMotion.game_dspgl import CoMotion_DiscoPygal
 from coMotion.game.comotion_game import CoMotion_Game
 from coMotion.game.comotion_events import COMOTION_EVENT_NAMES

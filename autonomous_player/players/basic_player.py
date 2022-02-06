@@ -1,20 +1,14 @@
-import time
-import random
-import importlib
 from functools import cached_property
 
-import numpy as np
-import networkx as nx
-import sklearn.neighbors
-
 from bindings import Segment_2, Point_2
-from coMotion.autonomous_player.utils import utils
 from coMotion.game.comotion_player import CoMotion_Player
-from coMotion.autonomous_player.algorithms.prm import Prm
-from coMotion.autonomous_player.plotter.plotter import Plotter
 import geometry_utils.collision_detection as collision_detection
-from coMotion.autonomous_player.utils.utils import Point, Segment
-from coMotion.autonomous_player.heuristic import basic_heuristic
+
+from autonomous_player.utils import utils
+from autonomous_player.algorithms.prm import Prm
+from autonomous_player.plotter.plotter import Plotter
+from autonomous_player.heuristic import basic_heuristic
+from autonomous_player.utils.utils import Point, Segment
 
 
 class RobotsData:

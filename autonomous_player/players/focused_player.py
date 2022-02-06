@@ -6,9 +6,10 @@ import networkx as nx
 
 from bindings import Segment_2, Point_2
 from coMotion.game.comotion_player import CoMotion_Robot
-from coMotion.autonomous_player.utils.utils import Point, Segment
-from coMotion.autonomous_player.players.basic_player import BasicPlayer
-from coMotion.autonomous_player.heuristic.basic_heuristic import BonusAndCirclesDistanceHeuristic
+
+from autonomous_player.utils.utils import Point, Segment
+from autonomous_player.players.basic_player import BasicPlayer
+from autonomous_player.heuristic.basic_heuristic import BonusAndCirclesDistanceHeuristic
 
 
 class FocusedPlayer(BasicPlayer):
