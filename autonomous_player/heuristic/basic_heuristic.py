@@ -2,6 +2,8 @@ import itertools
 import numpy as np
 from random import random
 
+from autonomous_player.utils.utils import Point, Segment, Bonus, Goal, Entity
+from coMotion.game.comotion_entities import CoMotion_Entity, CoMotion_Bonus, CoMotion_Goal
 
 class AbstractHeuristic:
     def __init__(self, game):
@@ -64,6 +66,13 @@ class BonusSmartDistanceHeuristic(BonusDistanceHeuristic):
 
 
 class BonusAndCirclesDistanceHeuristic(BonusDistanceHeuristic):
-    def score(self, robot_bonuses_distances, goals=[], turns_left=3, **kwargs):
-        return sum(robot_bonuses_distances)
+    BONUS_SCORE = 10
+    GOAL_SCORE = 30
+    ENTITY_TO_SCORE = {Bonus: BONUS_SCORE, Goal: GOAL_SCORE}
 
+    @staticmethod
+    def decresing_score(value: float, turns=1):
+        return 1 / np.power((value + 1), turns)
+
+    def score(self, robot_bonuses_distances: dict[Entity, float], turns=3, **kwargs):
+        return sum([self.decresing_score(robot_bonuses_distances[entity], turns) * self.ENTITY_TO_SCORE[type(entity)] for entity in robot_bonuses_distances])

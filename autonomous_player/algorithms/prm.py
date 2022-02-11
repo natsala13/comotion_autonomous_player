@@ -11,7 +11,7 @@ from coMotion.game.comotion_player import CoMotion_Robot
 import geometry_utils.collision_detection as collision_detection
 
 from autonomous_player.utils import utils
-from autonomous_player.utils.utils import Point, Segment
+from autonomous_player.utils.utils import Point, Segment, Entity
 
 
 class Prm:
@@ -85,14 +85,14 @@ class Prm:
 
         return edges
 
-    def create_graph(self, num_landmarks: int, fix_points=[]):
+    def create_graph(self, num_landmarks: int, fix_points: tuple[Entity] = None):
         # Compute the scene bounding box and sampling range
         bbox = collision_detection.calc_bbox(self.obstacles)
         x_range = (bbox[0].to_double(), bbox[1].to_double())
         y_range = (bbox[2].to_double(), bbox[3].to_double())
 
         self.sampled_points = self.sample_points(x_range, y_range, num_landmarks)
-        self.sampled_points += fix_points
+        self.sampled_points += [tuple(p) for p in fix_points] if fix_points else []
         self.knn.fit(self.sampled_points)
 
         edges = self.connect_edges(self.sampled_points, self.knn)

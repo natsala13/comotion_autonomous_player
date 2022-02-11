@@ -21,7 +21,7 @@ import geometry_utils.collision_detection as collision_detection
 
 from autonomous_player.utils import utils
 from autonomous_player.algorithms.prm import Prm
-from autonomous_player.plotter.plotter import Plotter
+from autonomous_player.plotter import plotter
 from autonomous_player.autonomous_game.game import Game
 from autonomous_player.heuristic.basic_heuristic import BonusDistanceHeuristic, BonusSmartDistanceHeuristic
 
@@ -52,7 +52,6 @@ def run_and_plot_prm(config, smaples):
 
     colors = [heuristic.score([p]) for p in prm.sampled_points]
 
-    plotter = Plotter()
     plotter.plot_prm_graph(prm, show=True, colors=colors)
 
     # first_node = list(prm)[0]

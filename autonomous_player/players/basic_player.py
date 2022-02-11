@@ -6,9 +6,9 @@ import geometry_utils.collision_detection as collision_detection
 
 from autonomous_player.utils import utils
 from autonomous_player.algorithms.prm import Prm
-from autonomous_player.plotter.plotter import Plotter
+from autonomous_player.plotter import plotter
 from autonomous_player.heuristic import basic_heuristic
-from autonomous_player.utils.utils import Point, Segment
+from autonomous_player.utils.utils import Point, Segment, Bonus, Goal, Entity
 
 
 class RobotsData:
@@ -26,14 +26,18 @@ class RobotsData:
             (robot.location.x().to_double(), robot.location.y().to_double()) for robot in self.game.other_player.robots)
 
     @cached_property
-    def bonuses(self):
-        return tuple((bonus.location.x().to_double(), bonus.location.y().to_double()) for bonus in self.game.bonuses if
+    def bonuses(self) -> tuple[Bonus]:
+        return tuple(Bonus(bonus.location.x().to_double(), bonus.location.y().to_double()) for bonus in self.game.bonuses if
                      not bonus.is_collected)
 
     @cached_property
-    def end_circles(self):
-        return tuple((bonus.location.x().to_double(), bonus.location.y().to_double()) for bonus in self.game.goals)
+    def end_circles(self) -> tuple[Goal]:
+        return tuple(Goal(bonus.location.x().to_double(), bonus.location.y().to_double()) for bonus in self.game.goals)
         # If end circle is free ?
+
+    @cached_property
+    def all_entities(self):
+        return self.bonuses + self.end_circles
 
 
 class BasicPlayer(CoMotion_Player):
@@ -82,7 +86,7 @@ class BasicPlayer(CoMotion_Player):
         max_len = max([len(paths[robot]) for robot in paths])
         for robot in paths:
             if len(paths[robot]) < max_len:
-                paths[robot] += [paths[robot][-1]] * (max_len - len(paths[robot]))
+                paths[robot] += [Segment_2(paths[robot][-1][1], paths[robot][-1][1])] * (max_len - len(paths[robot]))
 
     def preprocess_turn(self) -> None:
         """Preprocess all information before turn and return 2 list of robots"""
@@ -100,7 +104,6 @@ class BasicPlayer(CoMotion_Player):
         heuristics = {node: self.heuristic.score(node) for node in best_paths}
         sorted_nodes = sorted(heuristics, key=lambda n: heuristics[n])
 
-        plotter = Plotter()
         plotter.plot_prm_heat_map(heuristics)
 
         best_node = sorted_nodes[0]

@@ -1,4 +1,5 @@
 from bindings import Point_2, Segment_2
+from typing import Union
 
 
 class Point:
@@ -11,9 +12,31 @@ class Point:
     def __iter__(self):
         return self.dimensions.__iter__()
 
+    def __repr__(self):
+        return f'{type(self).__name__}({tuple(val for val in self.dimensions)})'
+
     @property
     def comotion_point(self):
         return Point_2(*self.dimensions)  # TODO: include multi dimensional points.
+
+
+class AbstractEntity(Point):
+    pass
+
+
+class Bonus(AbstractEntity):
+    pass
+
+
+class Goal(AbstractEntity):
+    pass
+
+
+class Robot(Point):
+    pass
+
+
+Entity = Union[Bonus, Goal]
 
 
 class Segment:
@@ -29,6 +52,9 @@ class Segment:
 
     def __iter__(self):
         return (self.src, self.dst).__iter__()
+
+    def __repr__(self):
+        return f'{type(self).__name__}({self.src}, {self.dst})'
 
     @property
     def comotion_segment(self):
