@@ -18,7 +18,7 @@
 - [ ] PROFILING - Run time of each block etc.
 - [ ] FEATURE - bridge test every turn around enemy robots.
 - [ ] FEATURE, RUNTIME - maybe not using as many points as possible to avoid enormous runtime later.
-- [ ] HEURISTIC - Path that collects few bonuses at once.
+- [ ] **HEURISTIC - Path that collects few bonuses at once.**
 - [ ] PROFILING - Distance matrix calculations takes a lot of time.
 - [ ] CRITICAL - Time prunning.
 - [ ] FEATURE - Parallel computing.
@@ -30,6 +30,7 @@
  - [x] Basic heuristic player
  - [x] Focused Heuristic player
  - [ ] Minmax player
+ - [ ] Alpha Beta player
  - [ ] Monte Carlo player
  - [ ] Traveling Salesman heuristic
 

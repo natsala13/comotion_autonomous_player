@@ -5,6 +5,7 @@ from random import random
 from autonomous_player.utils.utils import Point, Segment, Bonus, Goal, Entity
 from coMotion.game.comotion_entities import CoMotion_Entity, CoMotion_Bonus, CoMotion_Goal
 
+
 class AbstractHeuristic:
     def __init__(self, game):
         self.game = game
@@ -42,7 +43,10 @@ class BonusDistanceHeuristic(AbstractHeuristic):
 
 
 class BonusSmartDistanceHeuristic(BonusDistanceHeuristic):
-    """This method takes a too big amount of time"""
+    """This method reveive a list of robots and bonuses, and calculates all exponential possibilities to match
+        This method takes a too big amount of time
+    """
+
     def brute_search(self, distances):
         if not distances:
             return 0
@@ -66,13 +70,18 @@ class BonusSmartDistanceHeuristic(BonusDistanceHeuristic):
 
 
 class BonusAndCirclesDistanceHeuristic(BonusDistanceHeuristic):
+    """ This heuristic receives a list of matches between robots and bonuses and calculate distances times some factors.
+    """
     BONUS_SCORE = 10
     GOAL_SCORE = 30
     ENTITY_TO_SCORE = {Bonus: BONUS_SCORE, Goal: GOAL_SCORE}
 
     @staticmethod
-    def decresing_score(value: float, turns=1):
+    def decreasing_score(value: float, turns=1):
+        """ As turns advance, get less score for points 'close' to goals and not on them."""
         return 1 / np.power((value + 1), turns)
 
     def score(self, robot_bonuses_distances: dict[Entity, float], turns=3, **kwargs):
-        return sum([self.decresing_score(robot_bonuses_distances[entity], turns) * self.ENTITY_TO_SCORE[type(entity)] for entity in robot_bonuses_distances])
+        return sum(
+            [self.decreasing_score(robot_bonuses_distances[entity], turns) * self.ENTITY_TO_SCORE[type(entity)] for
+             entity in robot_bonuses_distances])

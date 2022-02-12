@@ -1,6 +1,6 @@
 scene:
-#  /home/nathan/tau/robotics/final_project/coMotion/coMotion/scenes/example_scene.json
-  /home/nathan/tau/robotics/final_project/coMotion/coMotion/scenes/far_bonuses.json
+  /home/nathan/tau/robotics/final_project/coMotion/coMotion/scenes/example_scene.json
+#  /home/nathan/tau/robotics/final_project/coMotion/coMotion/scenes/far_bonuses.json
 players:
   - module: autonomous_player.players.focused_player
     class: FocusedPlayer

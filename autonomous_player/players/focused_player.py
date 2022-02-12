@@ -23,22 +23,6 @@ class FocusedPlayer(BasicPlayer):
     def __init__(self, player_id, num_samples, k_nearest=15, **kwargs):
         super(FocusedPlayer, self).__init__(player_id, num_samples, k_nearest, 'BonusAndCirclesDistanceHeuristic')
 
-    # def create_distance_matrix(self, robots, goals, max_distance):
-    #     distance_matrix = np.zeros((len(robots), len(goals))) + 100
-    #     graph_per_robot = {robot: {} for robot in robots}
-    #
-    #     for robot_i, robot in enumerate(robots):
-    #         distances, paths = nx.algorithms.shortest_paths.weighted.single_source_dijkstra(self.prm.graph,
-    #                                                                                         robot)
-    #         for goal_i, goal in enumerate(goals):
-    #             if goal in distances:
-    #                 distance_matrix[robot_i][goal_i] = distances[goal]
-    #                 graph_per_robot[robot][goal] = paths[goal]
-    #
-    #         if graph_per_robot[robot] == {}:
-    #             graph_per_robot[robot] = {'self cycle': [Segment(robot, robot).comotion_segment]}
-    #
-    #     return graph_per_robot, distance_matrix
     @staticmethod
     def robot_self_cycle(robot) -> tuple[tuple]:
         return tuple([tuple(robot)])
@@ -83,9 +67,7 @@ class FocusedPlayer(BasicPlayer):
         current_distance = sum(distances)
 
         if current_distance < makespan:
-            return paths
-
-        # [plotter.plot_dijkestra_path(paths[robot], show=False, color='r') for robot in paths]
+            return paths, distances
 
         while current_distance >= makespan:
             maximum_robot = robots[np.argmax(distances)]
@@ -100,10 +82,22 @@ class FocusedPlayer(BasicPlayer):
                 assert new_path == self.robot_self_cycle(maximum_robot)
                 assert new_distance == 0
 
-        # [plotter.plot_dijkestra_path(paths[robot], show=False, color='g') for robot in paths]
-        # plt.show()
-
         return paths, dict(zip(match, distances))
+
+    def fix_all_paths(self, all_endpoints, graph_per_robot, distance_matrix):
+        fixed_actions: dict[tuple[Entity], dict[Robot, tuple[Point]]] = {}
+        distances_per_match: dict[tuple[Entity], dict[Entity, float]] = {}
+
+        for match in all_endpoints:
+            graphs = {robot: graph_per_robot[robot][goal] if goal in graph_per_robot[robot] else [] for robot, goal in
+                      zip(graph_per_robot, match)}
+
+            fixed_paths, distances = self.fix_path(self.data.robots, match, distance_matrix, graphs, self.game.makespan)
+
+            fixed_actions[match] = fixed_paths
+            distances_per_match[match] = distances
+
+        return fixed_actions, distances_per_match
 
     def find_best_match_for_bonus_choice(self, bonus_choice: tuple[Entity],
                                          distance_matrix: dict[tuple, dict[Entity, float]]) -> tuple[Entity]:
@@ -130,54 +124,18 @@ class FocusedPlayer(BasicPlayer):
 
         profiler.log('choose all actions')
 
-        # TODO: Big balagan..
-
-        # fixed_actions = [self.fix_path(self.data.robots,
-        #                              [distance_matrix[robot][bonus] for robot, bonus in zip(self.data.robots, match)],
-        #                                {robot: graph_per_robot[robot][goal] for robot, goal in
-        #                                 zip(graph_per_robot, match)},
-        #                                self.game.makespan) for match in all_endpoints]
-        fixed_actions: dict[tuple[Entity], dict[Robot, tuple[Point]]] = {}
-        distances_per_match: dict[tuple[Entity], dict[Entity, float]] = {}
-        for match in all_endpoints:
-            graphs = {robot: graph_per_robot[robot][goal] if goal in graph_per_robot[robot] else [] for robot, goal in
-                      zip(graph_per_robot, match)}
-
-            fixed_paths, distances = self.fix_path(self.data.robots, match, distance_matrix, graphs, self.game.makespan)
-
-            fixed_actions[match] = fixed_paths
-            distances_per_match[match] = distances
+        fixed_actions, distances_per_match = self.fix_all_paths(all_endpoints, graph_per_robot, distance_matrix)
 
         profiler.log('Fix all actions')
 
-        # import ipdb;ipdb.set_trace(context=10)
-
-        heuristic_states = [(self.heuristic.score(
-            distances_per_match[state], self.turn),
-                             state) for state in fixed_actions]
+        heuristic_states = [(self.heuristic.score(distances_per_match[state], self.turn), state) for state in
+                            fixed_actions]
 
         profiler.log('heuristic all states')
 
-        # This represents the best state to be in - list associating every robot to a goal index
-        # sum_states = [sum([distance_matrix[robot_i][bonus_j] for robot_returni, bonus_j in enumerate(endpoint_state)]) for
-        #               endpoint_state in all_endpoints]
-        #
-        # all_states = [{self.data.all_entities[bonus_j]: distance_matrix[robot_i][bonus_j] for robot_i, bonus_j in
-        #                enumerate(endpoint_state)} for endpoint_state in all_endpoints]
-        # valid_states = [state for state in all_states if
-        #                 sum(state.values()) < makespan]
-        # heuristic_states = [self.heuristic.score(state, self.turn) for state in valid_states]
         best_state = max(heuristic_states, key=lambda x: x[0])[1]
         best_graphs = fixed_actions[best_state]
-        # best_state = all_endpoints[best_state_index]
-        #
-        # valid_states = [(state_sum, state) for state_sum, state in zip(sum_states, all_endpoints) if
-        #                 state_sum < makespan]
 
-        # min_state = min(valid_states)[1]
-        # min_goal_list = [goals[goal_i] for goal_i in best_state]
-
-        # paths = {robot: best_graphs[robot] for robot in best_graphs}
         paths = {comotion_robot: self.point_list_to_segment_list(best_graphs[robot]) for comotion_robot, robot in
                  zip(self.robots, best_graphs)}
         self.equalise_paths_length(paths)
@@ -186,6 +144,8 @@ class FocusedPlayer(BasicPlayer):
         profiler.total()
 
         return paths
+
+
 """
 (robots, bonuses)
 --> distance matrix D{r: {b: float}}, path graphs matrix G{r: {b: [p]}float}
