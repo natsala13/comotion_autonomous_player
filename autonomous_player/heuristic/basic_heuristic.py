@@ -1,7 +1,10 @@
 import itertools
 import numpy as np
+import networkx as nx
 from random import random
 
+from autonomous_player.algorithms.prm import Prm
+from autonomous_player.players.basic_player import RobotsData
 from autonomous_player.utils.utils import Point, Segment, Bonus, Goal, Entity
 from coMotion.game.comotion_entities import CoMotion_Entity, CoMotion_Bonus, CoMotion_Goal
 
@@ -42,7 +45,7 @@ class BonusDistanceHeuristic(AbstractHeuristic):
             not bonus.is_collected)
 
 
-class BonusSmartDistanceHeuristic(BonusDistanceHeuristic):
+class BruteForceHeuristic(BonusDistanceHeuristic):
     """This method reveive a list of robots and bonuses, and calculates all exponential possibilities to match
         This method takes a too big amount of time
     """
@@ -69,7 +72,7 @@ class BonusSmartDistanceHeuristic(BonusDistanceHeuristic):
         return self.pseudo_closest_match(robots_location, self.bonuses)
 
 
-class BonusAndCirclesDistanceHeuristic(BonusDistanceHeuristic):
+class TimeDecreasingHeuristic(BonusDistanceHeuristic):
     """ This heuristic receives a list of matches between robots and bonuses and calculate distances times some factors.
     """
     BONUS_SCORE = 10

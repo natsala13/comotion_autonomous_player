@@ -12,16 +12,14 @@ from coMotion.game.comotion_player import CoMotion_Robot
 
 from autonomous_player.plotter import plotter
 from autonomous_player.utils.profiler import Profiler
-from coMotion.game.comotion_entities import CoMotion_Entity
 from autonomous_player.players.basic_player import BasicPlayer
 from autonomous_player.utils.utils import Point, Segment, Bonus, Goal, Entity, Robot, l2_norm
-from autonomous_player.heuristic.basic_heuristic import BonusAndCirclesDistanceHeuristic
 
 
 class FocusedPlayer(BasicPlayer):
 
     def __init__(self, player_id, num_samples, k_nearest=15, **kwargs):
-        super(FocusedPlayer, self).__init__(player_id, num_samples, k_nearest, 'BonusAndCirclesDistanceHeuristic')
+        super(FocusedPlayer, self).__init__(player_id, num_samples, k_nearest, 'TimeDecreasingHeuristic')
 
     @staticmethod
     def robot_self_cycle(robot) -> tuple[tuple]:
@@ -144,13 +142,3 @@ class FocusedPlayer(BasicPlayer):
         profiler.total()
 
         return paths
-
-
-"""
-(robots, bonuses)
---> distance matrix D{r: {b: float}}, path graphs matrix G{r: {b: [p]}float}
---> all best actions - return list of matching robots - bonuses without double permutations.
---> fix all paths. F{m: {r: [p]}}
- 
-
-"""

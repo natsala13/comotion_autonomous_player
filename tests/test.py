@@ -23,7 +23,7 @@ from autonomous_player.utils import utils
 from autonomous_player.algorithms.prm import Prm
 from autonomous_player.plotter import plotter
 from autonomous_player.autonomous_game.game import Game
-from autonomous_player.heuristic.basic_heuristic import BonusDistanceHeuristic, BonusSmartDistanceHeuristic
+from autonomous_player.heuristic.basic_heuristic import BonusDistanceHeuristic, BruteForceHeuristic
 
 
 def load_config(config_file: str) -> dict:
@@ -48,7 +48,7 @@ def run_and_plot_prm(config, smaples):
     prm.create_graph(smaples)
 
     game = Game.init_from_config(config)
-    heuristic = BonusSmartDistanceHeuristic(game.game)
+    heuristic = BruteForceHeuristic(game.game)
 
     colors = [heuristic.score([p]) for p in prm.sampled_points]
 
