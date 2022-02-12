@@ -65,7 +65,7 @@ class FocusedPlayer(BasicPlayer):
         current_distance = sum(distances)
 
         if current_distance < makespan:
-            return paths, distances
+            return paths, dict(zip(match, distances))
 
         while current_distance >= makespan:
             maximum_robot = robots[np.argmax(distances)]
