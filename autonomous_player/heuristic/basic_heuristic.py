@@ -4,10 +4,16 @@ import networkx as nx
 from random import random
 
 from autonomous_player.algorithms.prm import Prm
-from autonomous_player.players.basic_player import RobotsData
-from autonomous_player.utils.utils import Point, Segment, Bonus, Goal, Entity
+from autonomous_player.utils.profiler import Profiler
+from autonomous_player.utils.robot_data import RobotsData
+from autonomous_player.utils.utils import Point, Segment, Bonus, Goal, Entity, l2_norm
 from coMotion.game.comotion_entities import CoMotion_Entity, CoMotion_Bonus, CoMotion_Goal
 
+BONUS_SCORE = 10
+GOAL_SCORE = 30
+ENTITY_TO_SCORE = {Bonus: BONUS_SCORE, Goal: GOAL_SCORE}
+
+EPSILON = 0.1
 
 class AbstractHeuristic:
     def __init__(self, game):
@@ -78,9 +84,6 @@ class BruteForceHeuristic(BonusDistanceHeuristic):
 class TimeDecreasingHeuristic(BonusDistanceHeuristic):
     """ This heuristic receives a list of matches between robots and bonuses and calculate distances times some factors.
     """
-    BONUS_SCORE = 10
-    GOAL_SCORE = 30
-    ENTITY_TO_SCORE = {Bonus: BONUS_SCORE, Goal: GOAL_SCORE}
 
     @staticmethod
     def decreasing_score(value: float, turns=1):
@@ -89,7 +92,7 @@ class TimeDecreasingHeuristic(BonusDistanceHeuristic):
 
     def score(self, robot_bonuses_distances: dict[Entity, float], turns=3, **kwargs):
         return sum(
-            [self.decreasing_score(robot_bonuses_distances[entity], turns) * self.ENTITY_TO_SCORE[type(entity)] for
+            [self.decreasing_score(robot_bonuses_distances[entity], turns) * ENTITY_TO_SCORE[type(entity)] for
              entity in robot_bonuses_distances])
 
 
@@ -97,66 +100,124 @@ class PreProcessingHeuristic(TimeDecreasingHeuristic):
     def __init__(self, game):
         super(PreProcessingHeuristic, self).__init__(game)
         self.prm = None
+        self.bonuses_distances = None
         self.bonuses_graphs = None
 
     @staticmethod
-    def diatnces_to_all_other_bonuses(distances, paths, data):
-        return {bonus: distances[bonus] if bonus in distances else 1000 for bonus in data.bonuses},\
-               {bonus: paths[bonus] if bonus in paths else [] for bonus in data.bonuses}
+    def distances_to_all_other_bonuses(distances, data):
+        return {bonus: distances[tuple(bonus)] if tuple(bonus) in distances else 1000 for bonus in data.bonuses}
 
-    def preprocess(self, prm: Prm):
+    @staticmethod
+    def paths_to_all_other_bonuses(paths, data):
+        return {bonus: paths[tuple(bonus)] if tuple(bonus) in paths else [] for bonus in data.bonuses}
+
+    def preprocess(self, prm: Prm) -> None:
         self.prm = prm
         data = RobotsData(self.game, None)
-        all_graphs = {bonus: nx.algorithms.shortest_paths.weighted.single_source_dijkstra(prm.graph, tuple(bonus)) for
+        all_graphs = {bonus: nx.algorithms.shortest_paths.weighted.single_source_dijkstra(prm.graph, tuple(bonus))
+                      for
                       bonus in data.bonuses}
-        self.bonuses_graphs = {bonus: self.diatnces_to_all_other_bonuses(*all_graphs[bonus], data) for bonus in
+
+        self.bonuses_distances = {bonus: self.distances_to_all_other_bonuses(all_graphs[bonus][0], data) for bonus in
+                                  all_graphs}
+
+        self.bonuses_graphs = {bonus: self.paths_to_all_other_bonuses(all_graphs[bonus][1], data) for bonus in
                                all_graphs}
 
         ###############################
-        for bonus in self.bonuses_graphs:
-            print(f'{bonus} - {self.bonuses_graphs[bonus]}')
+        for bonus in self.bonuses_distances:
+            print(f'{bonus} - {self.bonuses_distances[bonus]}')
         ###############################
 
-    def add_bonus_to_path(self, all_bonuses: dict[Bonus, float], starting_location: Entity, end_bonus: Entity, max_distance: float, bonus_path: [Entity]):
-        for bonus in all_bonuses:
-            distance1, path = nx.algorithms.shortest_paths.weighted.single_source_dijkstra(self.prm.graph,
-                                                                                           starting_location,
-                                                                                           target=bonus)
+    def add_bonus_to_path(self, all_bonuses: dict[Bonus, float], starting_location: Entity, end_bonus: Entity,
+                          max_distance: float, bonus_path: [Entity]):
+        # profiler = Profiler(tabs=3)
 
-            distance2 = self.bonuses_graphs[bonus][0][end_bonus]
-            print(f'Trying to reach bonus {bonus} with {distance1=} and {distance2=}')
+        for bonus in all_bonuses:
+            if bonus in bonus_path:
+                continue
+
+            # profiler.log('Start loop')
+            distance1 = self.bonuses_distances[starting_location][tuple(bonus)]
+            path = self.bonuses_graphs[starting_location][tuple(bonus)]
+            # distance1, path = nx.algorithms.shortest_paths.weighted.single_source_dijkstra(self.prm.graph,
+            #                                                                                tuple(starting_location),
+            #                                                                                target=tuple(bonus))
+            # profiler.log('Dijkestra')
+
+            distance2 = self.bonuses_distances[bonus][end_bonus]
+            # print(f'Trying to reach bonus {bonus} with {distance1=} and {distance2=}')
+
+            # import ipdb;ipdb.set_trace()
 
             if distance1 + distance2 < max_distance and bonus not in bonus_path:
-                print(f'\t Added!')
+                # print(f'\t Added!')
                 return bonus, path
 
         return None, None
 
     def greedy_longets_path_up_to_distance(self, starting_location: Entity, end_bonus: Entity, max_distance: float,
-                                           distances: dict[Bonus, float]):
-        bonus_path = []
+                                           distances: dict[Bonus, float], robot_graphs: dict[Bonus, [Point]]):
+        self.bonuses_distances[starting_location] = distances
+        self.bonuses_graphs[starting_location] = robot_graphs
+
+        # profiler = Profiler(tabs=2)
+
+        bonus_path = [end_bonus, starting_location]
         total_path = []
         bonus = True
 
-        print('##########################################################')
-        remember_max_distance = max_distance
-        remember_original_distance = distances[end_bonus]
-        print(f'Trying to add bonuses to path from {starting_location} to {end_bonus}')
+        # print('##########################################################')
+        # remember_max_distance = max_distance
+        # remember_original_distance = distances[end_bonus]
+        # print(f'Trying to add bonuses to path from {starting_location} to {end_bonus} with {max_distance=}')
 
         while bonus is not None:
+            # profiler.log('start loop')
             sorted_bonuses = dict(sorted(distances.items(), key=lambda item: item[1]))
+            # profiler.log('sprt bonuses')
 
             bonus, path = self.add_bonus_to_path(sorted_bonuses, starting_location, end_bonus, max_distance, bonus_path)
+            # profiler.log('add bonus to path')
+
             if bonus:
                 bonus_path += [bonus]
                 total_path += path
                 max_distance -= distances[bonus]
 
                 starting_location = bonus
-                distances = self.bonuses_graphs[bonus][0]
+                distances = self.bonuses_distances[bonus]
 
-        path_length = remember_max_distance - max_distance
-        extra_length = path_length - remember_original_distance
-        print(f'Added all bonuses - {bonus_path} with total extra path length of {extra_length}')
-        print('############################################################')
-        return bonus_path, total_path
+            # profiler.log('added bonus to path')
+
+        # path_length = remember_max_distance - max_distance
+        # extra_length = path_length - remember_original_distance
+        # print(f'Added all bonuses - {bonus_path} with total extra path length of {extra_length}')
+        # print('############################################################')
+
+        # _, path = nx.algorithms.shortest_paths.weighted.single_source_dijkstra(self.prm.graph,
+        #                                                                        tuple(bonus_path[-1]),
+        #                                                                        target=tuple(end_bonus))
+        path = self.bonuses_graphs[bonus_path[-1]][tuple(end_bonus)]
+
+        total_path += path
+        bonus_path += [end_bonus]
+
+        return total_path, len(bonus_path) - 2
+
+    def upgrade_path_for_best_robot(self, match: [Entity],
+                                    data: RobotsData,
+                                    max_distance: float,
+                                    distances: dict[tuple, dict[Entity, float]],
+                                    graphs: dict[tuple, dict[Entity, [Point]]]):
+        all_fixes = {robot: self.greedy_longets_path_up_to_distance(robot, robot_match,
+                                                                    max_distance + distances[robot][robot_match],
+                                                                    distances[robot],
+                                                                    graphs[robot]) for robot, robot_match in
+                     zip(data.robots, match) if max_distance > 0}
+
+        if all_fixes:
+            best_robot = max(all_fixes, key=lambda x: all_fixes[x][1])
+            return best_robot, *all_fixes[best_robot]
+        else:
+            return None, [], 0

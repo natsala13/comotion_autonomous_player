@@ -1,11 +1,12 @@
 scene:
-  /home/nathan/tau/robotics/final_project/coMotion/coMotion/scenes/example_scene.json
-#  /home/nathan/tau/robotics/final_project/coMotion/coMotion/scenes/far_bonuses.json
+#  /home/nathan/tau/robotics/final_project/coMotion/coMotion/scenes/example_scene.json
+#  /home/nathan/tau/robotics/final_project/coMotion/coMotion/scenes/two_bonuses_scene.json
+  /home/nathan/tau/robotics/final_project/coMotion/coMotion/scenes/far_bonuses.json
 players:
   - module: autonomous_player.players.focused_player
     class: FocusedPlayer
     args:
-        num_samples: 300
+        num_samples: 1500
         k_nearest: 15
         heuristic_class: BonusDistanceHeuristic
   - module: coMotion.game.comotion_player

@@ -66,20 +66,12 @@ class Game:
             game_dspgl = CoMotion_DiscoPygal(gui)
             game_dspgl.connect_game(self.game)
 
-    def check_winner(self, gui=None) -> int:
+    def check_winner(self) -> int:
         winner = self.game.check_winner()
         message = f'Player {winner} won!' if winner > 0 else "Game ended with draw!"
 
         print(message, file=self.writer)
         print(DASH_STR, file=self.writer)
-
-        if gui:
-            gui.set_label('state', message)
-            print("Press 'Start Game' to start a new game...", file=self.writer)
-
-            gui.pushButtons['step'].setEnabled(False)
-            gui.pushButtons['start'].setEnabled(True)
-            gui.pushButtons['save'].setEnabled(True)
 
         return winner
 
@@ -126,5 +118,8 @@ class Game:
 
         print('################# GAME FINISHED ################')
         self.check_winner()
+
+    def get_first_player_score(self):
+        return self.game.first_player.score
 
 

@@ -15,6 +15,12 @@ class Point:
     def __repr__(self):
         return f'{type(self).__name__}({tuple(val for val in self.dimensions)})'
 
+    def __eq__(self, other):
+        return tuple(self) == tuple(other)
+
+    def __hash__(self):
+        return hash(tuple(self))
+
     @property
     def comotion_point(self):
         return Point_2(*self.dimensions)  # TODO: include multi dimensional points.

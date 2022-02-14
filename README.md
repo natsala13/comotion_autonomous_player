@@ -25,6 +25,8 @@
 - [ ] CRITICAL - Robots of same team not colliding with one another.
 - [ ] TESTING - Comparing different players, heuristic and params.
 - [ ] REFACTOR - focused heuristic is not organised.
+- [ ] FEATURE - allow robots not to move. 
+- [ ] Reduce makespan to 1 to see that nothing is broken.
 
 ## Players
  - [x] Basic heuristic player
