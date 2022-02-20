@@ -93,4 +93,8 @@ class BasicPlayer(CoMotion_Player):
 
         self.postprocess_turn()
 
+        print('################ POST PROCESS #################')
+        print(paths)
+        print('###############################################')
+
         return paths

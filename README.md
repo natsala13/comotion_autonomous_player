@@ -18,7 +18,7 @@
 - [ ] PROFILING - Run time of each block etc.
 - [ ] FEATURE - bridge test every turn around enemy robots.
 - [ ] FEATURE, RUNTIME - maybe not using as many points as possible to avoid enormous runtime later.
-- [ ] **HEURISTIC - Path that collects few bonuses at once.**
+- [x] HEURISTIC - Path that collects few bonuses at once.
 - [ ] PROFILING - Distance matrix calculations takes a lot of time.
 - [ ] CRITICAL - Time prunning.
 - [ ] FEATURE - Parallel computing.
@@ -27,6 +27,8 @@
 - [ ] REFACTOR - focused heuristic is not organised.
 - [ ] FEATURE - allow robots not to move. 
 - [ ] Reduce makespan to 1 to see that nothing is broken.
+- [ ] TESTING -  Create a testing framework for multiple players / scenes / params.
+- [ ] BUG - More robots than bonuses cause an exception.
 
 ## Players
  - [x] Basic heuristic player

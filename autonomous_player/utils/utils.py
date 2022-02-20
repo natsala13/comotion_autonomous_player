@@ -13,7 +13,7 @@ class Point:
         return self.dimensions.__iter__()
 
     def __repr__(self):
-        return f'{type(self).__name__}({tuple(val for val in self.dimensions)})'
+        return f'{type(self).__name__}{tuple(val for val in self.dimensions)}'
 
     def __eq__(self, other):
         return tuple(self) == tuple(other)
