@@ -16,6 +16,7 @@ ENTITY_TO_SCORE = {Bonus: BONUS_SCORE, Goal: GOAL_SCORE}
 
 EPSILON = 0.1
 
+
 class AbstractHeuristic:
     def __init__(self, game):
         self.game = game
@@ -136,9 +137,7 @@ class PreProcessingHeuristic(TimeDecreasingHeuristic):
 
     def add_bonus_to_path(self, all_bonuses: [Bonus], starting_location: Entity, end_bonus: Entity,
                           max_distance: float, bonus_path: [Entity]):
-        print(f'Adding bonus to path from: {all_bonuses}')
-
-        for bonus in all_bonuses:
+        for bonus in all_bonuses[:3]:
             if bonus in bonus_path:
                 continue
 
@@ -148,10 +147,14 @@ class PreProcessingHeuristic(TimeDecreasingHeuristic):
             # profiler.log('Start loop')
             # distance1 = self.bonuses_distances[starting_location][tuple(bonus)]
             # path = self.bonuses_graphs[starting_location][tuple(bonus)]
+            try:
+                distance1, path = nx.algorithms.shortest_paths.weighted.single_source_dijkstra(self.prm.graph,
+                                                                                               tuple(starting_location),
+                                                                                               target=tuple(bonus))
+            except nx.exception.NetworkXNoPath:
+                distance1 = 1000
+                path = []
 
-            distance1, path = nx.algorithms.shortest_paths.weighted.single_source_dijkstra(self.prm.graph,
-                                                                                           tuple(starting_location),
-                                                                                           target=tuple(bonus))
             # data = RobotsData(self.game, None)
             # for robot in data.opponent_robots:
             #     if robot in path:
@@ -204,7 +207,8 @@ class PreProcessingHeuristic(TimeDecreasingHeuristic):
                 max_distance -= distances[bonus]
 
                 starting_location = bonus
-                distances = {b: self.bonuses_distances[bonus][b] for b in self.bonuses_distances[bonus] if b in distances}
+                distances = {b: self.bonuses_distances[bonus][b] for b in self.bonuses_distances[bonus] if
+                             b in distances}
                 print(f'Added Bonus {bonus} to path!')
 
             # profiler.log('added bonus to path')

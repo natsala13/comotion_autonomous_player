@@ -29,6 +29,7 @@
 - [ ] Reduce makespan to 1 to see that nothing is broken.
 - [ ] TESTING -  Create a testing framework for multiple players / scenes / params.
 - [ ] BUG - More robots than bonuses cause an exception.
+- [ ] FEATURE - Allow upgrading some robot's paths and not only one. 
 
 ## Players
  - [x] Basic heuristic player

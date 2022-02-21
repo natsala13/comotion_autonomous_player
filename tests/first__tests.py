@@ -24,3 +24,17 @@ def test_greedy_2_close_bonuses():
     game.play_game()
 
     assert game.get_first_player_score() == 20
+
+
+def test_winning_opponent():
+    config = {'scene': '/home/nathan/tau/robotics/final_project/coMotion/coMotion/scenes/two_bonuses_scene.json',
+              'players': [{'module': 'autonomous_player.players.focused_player', 'class': 'FocusedPlayer',
+                           'args': {'num_samples': 1500, 'k_nearest': 15, 'heuristic_class': 'BonusDistanceHeuristic'}},
+                          {'module': 'coMotion.game.comotion_player', 'class': 'CoMotion_RandomPRMPlayer',
+                           'args': {'num_landmarks': 1000, 'K': 15}}]}
+
+    game = Game.init_from_config(config)
+    game.init_game()
+    game.play_game()
+
+    assert game.get_first_player_score() == 20
