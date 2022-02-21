@@ -10,7 +10,7 @@ class RobotsData:
 
     @cached_property
     def robots(self):
-        return tuple((robot.location.x().to_double(), robot.location.y().to_double()) for robot in self.my_robots)
+        return tuple((robot.location.x().to_double(), robot.location.y().to_double()) for robot in self.my_robots)  # self.game.other_player.robots
 
     @cached_property
     def opponent_robots(self):
@@ -19,6 +19,10 @@ class RobotsData:
 
     @cached_property
     def bonuses(self) -> tuple[Bonus]:
+        print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+        print(tuple(Bonus(bonus.location.x().to_double(), bonus.location.y().to_double()) for bonus in self.game.bonuses if
+              not bonus.is_collected))
+        print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
         return tuple(Bonus(bonus.location.x().to_double(), bonus.location.y().to_double()) for bonus in self.game.bonuses if
                      not bonus.is_collected)
 

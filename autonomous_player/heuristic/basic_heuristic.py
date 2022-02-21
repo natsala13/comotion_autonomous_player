@@ -3,6 +3,7 @@ import numpy as np
 import networkx as nx
 from random import random
 
+from autonomous_player.plotter import plotter
 from autonomous_player.algorithms.prm import Prm
 from autonomous_player.utils.profiler import Profiler
 from autonomous_player.utils.robot_data import RobotsData
@@ -133,20 +134,29 @@ class PreProcessingHeuristic(TimeDecreasingHeuristic):
 
         self.print_distances()
 
-    def add_bonus_to_path(self, all_bonuses: dict[Bonus, float], starting_location: Entity, end_bonus: Entity,
+    def add_bonus_to_path(self, all_bonuses: [Bonus], starting_location: Entity, end_bonus: Entity,
                           max_distance: float, bonus_path: [Entity]):
+        print(f'Adding bonus to path from: {all_bonuses}')
+
         for bonus in all_bonuses:
             if bonus in bonus_path:
                 continue
 
-            # profiler.log('Start loop')
-            distance1 = self.bonuses_distances[starting_location][tuple(bonus)]
-            path = self.bonuses_graphs[starting_location][tuple(bonus)]
-            #TODO: distance1 and 2 are only heuristic! I should change them to real paths.
+            if bonus not in self.prm.graph:
+                continue
 
-            # distance1, path = nx.algorithms.shortest_paths.weighted.single_source_dijkstra(self.prm.graph,
-            #                                                                                tuple(starting_location),
-            #                                                                                target=tuple(bonus))
+            # profiler.log('Start loop')
+            # distance1 = self.bonuses_distances[starting_location][tuple(bonus)]
+            # path = self.bonuses_graphs[starting_location][tuple(bonus)]
+
+            distance1, path = nx.algorithms.shortest_paths.weighted.single_source_dijkstra(self.prm.graph,
+                                                                                           tuple(starting_location),
+                                                                                           target=tuple(bonus))
+            # data = RobotsData(self.game, None)
+            # for robot in data.opponent_robots:
+            #     if robot in path:
+            #         import ipdb;ipdb.set_trace()
+
             # profiler.log('Dijkestra')
             try:
                 distance2 = self.bonuses_distances[bonus][end_bonus]
@@ -174,13 +184,15 @@ class PreProcessingHeuristic(TimeDecreasingHeuristic):
         bonus = True
 
         print('##########################################################')
-        remember_max_distance = max_distance
-        remember_original_distance = distances[end_bonus]
+        # remember_max_distance = max_distance
+        # remember_original_distance = distances[end_bonus]
         print(f'Trying to add bonuses to path from {starting_location} to {end_bonus} with {max_distance=}')
+        print(f'Gotta look over robots {list(distances.keys())}')
 
         while bonus is not None:
             # profiler.log('start loop')
-            sorted_bonuses = list(dict(sorted(distances.items(), key=lambda item: item[1])).keys())
+
+            sorted_bonuses = [d[0] for d in sorted(distances.items(), key=lambda item: item[1])]
             # profiler.log('sprt bonuses')
 
             bonus, path = self.add_bonus_to_path(sorted_bonuses, starting_location, end_bonus, max_distance, bonus_path)
@@ -192,20 +204,20 @@ class PreProcessingHeuristic(TimeDecreasingHeuristic):
                 max_distance -= distances[bonus]
 
                 starting_location = bonus
-                distances = self.bonuses_distances[bonus]
+                distances = {b: self.bonuses_distances[bonus][b] for b in self.bonuses_distances[bonus] if b in distances}
                 print(f'Added Bonus {bonus} to path!')
 
             # profiler.log('added bonus to path')
 
-        path_length = remember_max_distance - max_distance
-        extra_length = path_length - remember_original_distance
-        print(f'Added all bonuses - {bonus_path[2:]} with total extra path length of {extra_length}')
-        print('############################################################')
+        # path_length = remember_max_distance - max_distance
+        # extra_length = path_length - remember_original_distance
+        # print(f'Added all bonuses - {bonus_path[2:]} with total extra path length of {extra_length}')
+        # print('############################################################')
 
-        # _, path = nx.algorithms.shortest_paths.weighted.single_source_dijkstra(self.prm.graph,
-        #                                                                        tuple(bonus_path[-1]),
-        #                                                                        target=tuple(end_bonus))
-        path = self.bonuses_graphs[bonus_path[-1]][tuple(end_bonus)]
+        _, path = nx.algorithms.shortest_paths.weighted.single_source_dijkstra(self.prm.graph,
+                                                                               tuple(bonus_path[-1]),
+                                                                               target=tuple(end_bonus))
+        # path = self.bonuses_graphs[bonus_path[-1]][tuple(end_bonus)]
 
         total_path += path
         bonus_path += [end_bonus]
@@ -219,7 +231,7 @@ class PreProcessingHeuristic(TimeDecreasingHeuristic):
                                     graphs: dict[tuple, dict[Entity, [Point]]]) -> (Robot, [Point], int):
         all_fixes = {robot: self.greedy_longets_path_up_to_distance(robot, robot_match,
                                                                     max_distance + distances[robot][robot_match],
-                                                                    {b: distances[robot][b] for b in data.all_entities  },
+                                                                    {b: distances[robot][b] for b in data.bonuses},
                                                                     graphs[robot]) for robot, robot_match in
                      zip(data.robots, match) if max_distance > 0}
 
@@ -232,6 +244,13 @@ class PreProcessingHeuristic(TimeDecreasingHeuristic):
             return None, [], 0
 
     def score(self, robot_bonuses_distances: dict[Entity, float], turns=3, **kwargs):
+        # print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+        # print(robot_bonuses_distances)
+        # print([self.decreasing_score(robot_bonuses_distances[entity], turns) * ENTITY_TO_SCORE[type(entity)] for
+        #      entity in robot_bonuses_distances])
+        # print(sum([self.decreasing_score(robot_bonuses_distances[entity], turns) * ENTITY_TO_SCORE[type(entity)] for
+        #      entity in robot_bonuses_distances]))
+        # print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
         return sum(
             [self.decreasing_score(robot_bonuses_distances[entity], turns) * ENTITY_TO_SCORE[type(entity)] for
              entity in robot_bonuses_distances])

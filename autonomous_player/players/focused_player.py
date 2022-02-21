@@ -92,11 +92,11 @@ class FocusedPlayer(BasicPlayer):
         fixed_actions: dict[tuple[Entity], dict[Robot, tuple[Point]]] = {}
         distances_per_match: dict[tuple[Entity], dict[Entity, float]] = {}
 
-        print('*************** All distances BEFORE fix ******************')
-        for match in all_endpoints:
-            debug_distances = [distance_matrix[robot][bonus] for robot, bonus in zip(self.data.robots, match)]
-            print(f'*\t {match} - {debug_distances} = {sum(debug_distances)}')
-        print('***********************************************************')
+        # print('*************** All distances BEFORE fix ******************')
+        # for match in all_endpoints:
+        #     debug_distances = [distance_matrix[robot][bonus] for robot, bonus in zip(self.data.robots, match)]
+        #     print(f'*\t {match} - {debug_distances} = {sum(debug_distances)}')
+        # print('***********************************************************')
 
         for match in all_endpoints:
             graphs = {robot: graph_per_robot[robot][goal] if goal in graph_per_robot[robot] else [] for robot, goal in
@@ -107,10 +107,10 @@ class FocusedPlayer(BasicPlayer):
             fixed_actions[match] = fixed_paths
             distances_per_match[match] = distances
 
-        print('*************** All distances AFTER fix ******************')
-        for match in all_endpoints:
-            print(f'*\t {match} - {list(distances_per_match[match].values())} = {sum(distances_per_match[match].values())}')
-        print('***********************************************************')
+        # print('*************** All distances AFTER fix ******************')
+        # for match in all_endpoints:
+        #     print(f'*\t {match} - {list(distances_per_match[match].values())} = {sum(distances_per_match[match].values())}')
+        # print('***********************************************************')
 
         return fixed_actions, distances_per_match
 
@@ -169,42 +169,42 @@ class FocusedPlayer(BasicPlayer):
                                                                            graph_per_robot) for match in fixed_actions}
         profiler.log('Run all greedy searches')
 
-        print('################ Better States ##############')
-        for match in better_states:
-            best_robot, better_path, bonus_num = better_states[match]
-            if best_robot:
-                print(f'{match} - Path for robot {best_robot}  was changed from {len(fixed_actions[match][best_robot])} to {len(better_path)} with additional {bonus_num}')
-                print(f'\t {fixed_actions[match][best_robot]}')
-                print('\t -->')
-                print(f'\t {better_path}')
-            else:
-                print(f'{match} hasnt changed')
-        print('#############################################')
-
+        # print('################ Better States ##############')
         # for match in better_states:
         #     best_robot, better_path, bonus_num = better_states[match]
         #     if best_robot:
-        #         fixed_actions[match][best_robot] = better_path
+        #         print(f'{match} - Path for robot {best_robot}  was changed from {len(fixed_actions[match][best_robot])} to {len(better_path)} with additional {bonus_num}')
+        #         print(f'\t {fixed_actions[match][best_robot]}')
+        #         print('\t -->')
+        #         print(f'\t {better_path}')
+        #     else:
+        #         print(f'{match} hasnt changed')
+        # print('#############################################')
 
-        for match in fixed_actions:
-            print(f'{match} - {[len(fixed_actions[match][r]) for r in fixed_actions[match]]}')
+        for match in better_states:
+            best_robot, better_path, bonus_num = better_states[match]
+            if best_robot:
+                fixed_actions[match][best_robot] = better_path
+
+        # for match in fixed_actions:
+        #     print(f'{match} - {[len(fixed_actions[match][r]) for r in fixed_actions[match]]}')
 
 
         profiler.log(f'Fix paths after greedy search.')
 
         heuristic_states = [(self.heuristic.score(self.distance_from_match([distance_matrix[robot][bonus] for robot, bonus in zip(self.data.robots, match)] ,distance_from_endpath_to_bonus_per_match[match]), self.turn) +
-                             # better_states[match][2] * BONUS_SCORE, match)
-                             0, match)
+                             better_states[match][2] * BONUS_SCORE, match)
+                             # 0, match)
                             for match in
                             fixed_actions]
 
         profiler.log('heuristic all states')
 
-        print('################ HEURISTIC #################')
-        for score, match in heuristic_states:
-            distances_left = self.distance_from_match([distance_matrix[robot][bonus] for robot, bonus in zip(self.data.robots, match)] ,distance_from_endpath_to_bonus_per_match[match])
-            print(f'{match} - {distances_left}, score - {score}')
-        print('#############################################')
+        # print('################ HEURISTIC #################')
+        # for score, match in heuristic_states:
+        #     distances_left = self.distance_from_match([distance_matrix[robot][bonus] for robot, bonus in zip(self.data.robots, match)] ,distance_from_endpath_to_bonus_per_match[match])
+        #     print(f'{match} - {distances_left}, score - {score}')
+        # print('#############################################')
 
         best_state = max(heuristic_states, key=lambda x: x[0])[1]
         best_graphs = fixed_actions[best_state]
@@ -219,5 +219,5 @@ class FocusedPlayer(BasicPlayer):
         profiler.log('end bullshit...')
         profiler.total()
 
-        print(paths)
+        # print(paths)
         return paths
