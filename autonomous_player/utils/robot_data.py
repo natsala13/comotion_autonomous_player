@@ -32,5 +32,5 @@ class RobotsData:
         # If end circle is free ?
 
     @cached_property
-    def all_entities(self):
+    def all_entities(self) -> tuple[Entity]:
         return self.bonuses + self.end_circles

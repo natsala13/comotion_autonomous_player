@@ -10,27 +10,32 @@ import matplotlib.pyplot as plt
 from bindings import Segment_2, Point_2
 from coMotion.game.comotion_player import CoMotion_Robot
 
+from autonomous_player.algorithms.greedy_upgrade_path import UpgradePath
 from autonomous_player.plotter import plotter
 from autonomous_player.utils.profiler import Profiler
 from autonomous_player.players.basic_player import BasicPlayer
 from autonomous_player.heuristic.basic_heuristic import BONUS_SCORE
-from autonomous_player.utils.utils import Point, Segment, Bonus, Goal, Entity, Robot, l2_norm
+from autonomous_player.utils.utils import Point, Segment, Bonus, Goal, Entity, Robot, Path, l2_norm
 
 
 class FocusedPlayer(BasicPlayer):
 
     def __init__(self, player_id, num_samples, k_nearest=15, **kwargs):
         super(FocusedPlayer, self).__init__(player_id, num_samples, k_nearest, 'PreProcessingHeuristic')
+        self.upgrade_path = None
 
     def preprocess(self):
         super(FocusedPlayer, self).preprocess()
         self.heuristic.preprocess(self.prm)
+        self.upgrade_path = UpgradePath(self.prm, self.heuristic.bonuses_distances)
 
     @staticmethod
-    def robot_self_cycle(robot) -> tuple[tuple]:
-        return tuple([tuple(robot)])
+    def robot_self_cycle(robot) -> Path:
+        return Path([tuple(robot)], length=0)
 
-    def create_distance_dictionary(self, robots: list[tuple], goals: tuple[Entity], max_distance) -> tuple[dict, dict]:
+    def create_distance_dictionary(self, robots: list[Robot],
+                                   goals: tuple[Entity],
+                                   max_distance) -> tuple[dict[Robot, Path], dict[Robot, dict[Entity, float]]]:
         distance_matrix = {robot: {} for robot in robots}
         graph_per_robot = {robot: {} for robot in robots}
 
@@ -40,7 +45,7 @@ class FocusedPlayer(BasicPlayer):
             for goal in goals:
                 if tuple(goal) in distances:
                     distance_matrix[robot][goal] = distances[tuple(goal)]
-                    graph_per_robot[robot][goal] = paths[tuple(goal)]
+                    graph_per_robot[robot][goal] = Path(paths[tuple(goal)], length=distances[tuple(goal)], endpoint=goal)
                 else:
                     logging.debug(f'goal {goal} is not reachable...')
                     distance_matrix[robot][goal] = 1000  # TODO: Add a path to let us closer to that bonus.
@@ -49,7 +54,7 @@ class FocusedPlayer(BasicPlayer):
         return graph_per_robot, distance_matrix
 
     @staticmethod
-    def sub_path_up_to_distance(path: tuple[Point], max_distance) -> tuple[tuple[Point], float]:
+    def sub_path_up_to_distance(path: Path, max_distance) -> tuple[Path, float]:
         distance = 0
         new_path = [path[0]]
 
@@ -61,13 +66,16 @@ class FocusedPlayer(BasicPlayer):
             else:
                 break
 
-        return tuple(new_path), distance
+        # TODO: Update bonus number of path to zero
+        return Path(new_path, length=distance), distance
 
-    def fix_path(self, robots, match: tuple[Entity], distance_matrix: dict[Robot, dict[Entity, float]],
-                 paths: dict[Robot, tuple[Point]], makespan: float):
+    def fix_path(self, robots: [Robot],
+                 match: tuple[Entity],
+                 distance_matrix: dict[Robot, dict[Entity, float]],
+                 paths: dict[Robot, Path],
+                 makespan: float) -> (dict[Robot, Path], dict[Entity, float]):
         """Receive a path longer than makespan and shorten it per robot until it fits."""
         distances = [distance_matrix[robot][bonus] for robot, bonus in zip(self.data.robots, match)]
-        # print(f'*\t {match} - {distances}')
         current_distance = sum(distances)
 
         if current_distance < makespan:
@@ -78,6 +86,8 @@ class FocusedPlayer(BasicPlayer):
             allowed_distance = makespan - (current_distance - max(distances))
 
             new_path, new_distance = self.sub_path_up_to_distance(paths[maximum_robot], allowed_distance)
+            new_path.distance_to_goal = max(distances) - new_distance
+
             paths[maximum_robot] = new_path
             current_distance -= (max(distances) - new_distance)
             distances[np.argmax(distances)] = new_distance
@@ -88,8 +98,11 @@ class FocusedPlayer(BasicPlayer):
 
         return paths, dict(zip(match, distances))
 
-    def fix_all_paths(self, all_endpoints, graph_per_robot, distance_matrix) -> tuple[dict, dict]:
-        fixed_actions: dict[tuple[Entity], dict[Robot, tuple[Point]]] = {}
+    def fix_all_paths(self, all_endpoints: [Point],
+                      graph_per_robot: dict[Robot, Path],
+                      distance_matrix: dict[Robot, dict[Entity, float]]) -> tuple[dict, dict]:
+
+        fixed_actions: dict[tuple[Entity], dict[Robot, Path]] = {}
         distances_per_match: dict[tuple[Entity], dict[Entity, float]] = {}
 
         # print('*************** All distances BEFORE fix ******************')
@@ -99,7 +112,7 @@ class FocusedPlayer(BasicPlayer):
         # print('***********************************************************')
 
         for match in all_endpoints:
-            graphs = {robot: graph_per_robot[robot][goal] if goal in graph_per_robot[robot] else [] for robot, goal in
+            graphs = {robot: graph_per_robot[robot][goal] if goal in graph_per_robot[robot] else Path([]) for robot, goal in
                       zip(graph_per_robot, match)}
 
             fixed_paths, distances = self.fix_path(self.data.robots, match, distance_matrix, graphs, self.game.makespan)
@@ -135,7 +148,7 @@ class FocusedPlayer(BasicPlayer):
 
     def find_best_path(self) -> dict[CoMotion_Robot, list[Segment_2]]:
         makespan = self.game.makespan
-        goals: tuple[Entity] = self.data.bonuses + self.data.end_circles
+        goals: tuple[Entity] = self.data.all_entities
 
         profiler = Profiler()
 
@@ -147,20 +160,21 @@ class FocusedPlayer(BasicPlayer):
 
         profiler.log('choose all actions')
 
+        fixed_actions: dict[tuple[Entity], dict[Robot, Path]]
         distance_from_endpath_to_bonus_per_match: dict[Entity, float]
         fixed_actions, distance_from_endpath_to_bonus_per_match = self.fix_all_paths(all_endpoints,
                                                                                      graph_per_robot,
                                                                                      distance_matrix)
 
         profiler.log('Fix all actions')
-        # print(distance_from_endpath_to_bonus_per_match)
-        # print('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^')
+        for match in fixed_actions:
+            my_dists = [distance_matrix[robot][goal] for robot, goal in zip(self.data.robots, match)]
+            logging.debug(f'{match=} - {my_dists} = {sum(my_dists)}')
 
         # TODO: State and match refactor names.
-        # TODO: verify it again
         # TODO: Add options for paths in which certain robots don't move.
         # TODO: Check whether issue above makes fixing paths inutil?
-        better_states = {match: self.heuristic.upgrade_path_for_best_robot(match,
+        better_states = {match: self.upgrade_path.upgrade_path_for_best_robot(match,
                                                                            self.data,
                                                                            makespan - self.match_length(match,
                                                                                                         self.data.robots,
@@ -169,22 +183,10 @@ class FocusedPlayer(BasicPlayer):
                                                                            graph_per_robot) for match in fixed_actions}
         profiler.log('Run all greedy searches')
 
-        # print('################ Better States ##############')
-        # for match in better_states:
-        #     best_robot, better_path, bonus_num = better_states[match]
-        #     if best_robot:
-        #         print(f'{match} - Path for robot {best_robot}  was changed from {len(fixed_actions[match][best_robot])} to {len(better_path)} with additional {bonus_num}')
-        #         print(f'\t {fixed_actions[match][best_robot]}')
-        #         print('\t -->')
-        #         print(f'\t {better_path}')
-        #     else:
-        #         print(f'{match} hasnt changed')
-        # print('#############################################')
-
         for match in better_states:
-            best_robot, better_path, bonus_num = better_states[match]
-            if best_robot:
-                fixed_actions[match][best_robot] = better_path
+            if better_states[match]:
+                for robot in better_states[match]:
+                    fixed_actions[match][robot] = better_states[match][robot]
 
         # for match in fixed_actions:
         #     print(f'{match} - {[len(fixed_actions[match][r]) for r in fixed_actions[match]]}')
@@ -192,11 +194,11 @@ class FocusedPlayer(BasicPlayer):
 
         profiler.log(f'Fix paths after greedy search.')
 
-        heuristic_states = [(self.heuristic.score(self.distance_from_match([distance_matrix[robot][bonus] for robot, bonus in zip(self.data.robots, match)] ,distance_from_endpath_to_bonus_per_match[match]), self.turn) +
-                             better_states[match][2] * BONUS_SCORE, match)
-                             # 0, match)
+        heuristic_states = [(self.heuristic.score2(fixed_actions[match], self.turn), match)
                             for match in
                             fixed_actions]
+        # print(heuristic_states)
+        # print(fixed_actions)
 
         profiler.log('heuristic all states')
 
@@ -209,13 +211,22 @@ class FocusedPlayer(BasicPlayer):
         best_state = max(heuristic_states, key=lambda x: x[0])[1]
         best_graphs = fixed_actions[best_state]
 
-        print(f'Chosen action - {best_state} with heuristic: {max(heuristic_states, key=lambda x: x[0])[0]}')
+        # my_dists = [distance_matrix[robot][goal] for robot, goal in zip(self.data.robots, best_state)]
+        # import ipdb;ipdb.set_trace(context=10)
+        # stam = self.heuristic.upgrade_path_for_best_robot(best_state,
+        #                                            self.data,
+        #                                            makespan - self.match_length(best_state,
+        #                                                                         self.data.robots,
+        #                                                                         distance_matrix),
+        #                                            distance_matrix,
+        #                                            graph_per_robot)
 
-        paths = {comotion_robot: self.point_list_to_segment_list(best_graphs[robot]) for comotion_robot, robot in
+        logging.debug(f'Chosen action - {best_state} with heuristic: {max(heuristic_states, key=lambda x: x[0])[0]}')
+
+        paths = {comotion_robot: best_graphs[robot].comotion_path for comotion_robot, robot in
                  zip(self.robots, best_graphs)}
 
         self.equalise_paths_length(paths)
-
         profiler.log('end bullshit...')
         profiler.total()
 

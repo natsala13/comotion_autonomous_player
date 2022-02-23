@@ -1,3 +1,5 @@
+import logging
+
 from bindings import Segment_2, Point_2
 from coMotion.game.comotion_player import CoMotion_Player
 import geometry_utils.collision_detection as collision_detection
@@ -93,8 +95,8 @@ class BasicPlayer(CoMotion_Player):
 
         self.postprocess_turn()
 
-        print('################ POST PROCESS #################')
-        print(paths)
-        print('###############################################')
+        logging.debug('################ POST PROCESS #################')
+        logging.debug(paths)
+        logging.debug('###############################################')
 
         return paths

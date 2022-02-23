@@ -20,6 +20,15 @@ setup(
     keywords="robotic autonomous player",
     url="https://github.com/natsala13/comotion_autonomous_player",
     packages=['autonomous_player'],
+    install_requires=[
+          'numpy',
+          'matplotlib',
+          'PyYAML',
+          'docopt',
+          'networkx',
+          'scikit-learn',
+          'PyQt5'
+      ],
     long_description=read('README.md'),
     classifiers=[
         "Development Status :: 3 - Alpha",
