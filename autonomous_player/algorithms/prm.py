@@ -113,12 +113,12 @@ class Prm:
 
     def remove_opponent_robots_location(self, robots: [Point]):
         """remove from prm opponent robot location so we won't collide."""
-        my_radius = 2  # TODO: Change my_radius to robot's radius.
+        my_radius = self.robots[0].radius.to_double() * 1.05  # Add 5% radisus to robots.
         # k_neighbors_indexes = [self.knn.kneighbors([tuple(robot)], return_distance=False)[0] for robot in robots]
         # k_neighbors_indexes = self.flatten(k_neighbors_indexes)
         # k_neighbors = [self.sampled_points[i] for i in k_neighbors_indexes]
         robots_points = [point for point in self.sampled_points if
-                         any([utils.l2_norm(robot, point) < my_radius for robot in robots])]
+                         any([utils.l2_norm(robot, point) < 2 * my_radius for robot in robots])]
 
         self.opponent_edges = self.flatten([self.graph.edges(neighbor) for neighbor in robots_points])
         self.opponent_nodes = robots_points
