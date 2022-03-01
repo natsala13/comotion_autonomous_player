@@ -87,11 +87,59 @@ class BasicPlayer(CoMotion_Player):
 
         return paths
 
+    @staticmethod
+    def is_comotion_edge_static(edge):
+        return edge[0] == edge[1]
+
+    def fix_robots_collision(self, paths: dict) -> bool:
+        for robot in paths:
+            path = paths[robot]
+
+            for i, edge in enumerate(path):
+                if self.is_comotion_edge_static(edge):
+                    continue
+
+                team_edges = [paths[team_robot][i] for team_robot in paths]
+
+                if collision_detection.check_intersection_against_robots(team_edges, [FT(1.0)] * len(team_edges)):
+                    print('Collision Detected - Reparation fase 1')
+                    team_robots_not_moving = [Segment_2(paths[team_robot][i][0], paths[team_robot][i][0]) for team_robot
+                                              in paths]
+                    # if collision_detection.check_intersection_against_robots(team_robots_not_moving, [FT(1.0)] * len(team_robots_not_moving)):
+                    print(
+                        f'Collision Detected - Reparation fase 2 - Trimming path {Robot.robot_from_comotion(robot)} at edge {i} - {edge}')
+                    static_location = Segment_2(edge[0], edge[0])
+
+                    paths[robot] = path[:i] + [static_location] * (len(path) - i)
+                    # else:
+                    #     print(f'Collision Detected at {robot=} at segment {i} - {edge} - Reparation fase 1 possible - adding empty segment')
+                    #     for other_robot in paths:
+                    #         if other_robot != robot:
+                    #             static_location = Segment_2(paths[other_robot][i][0], paths[other_robot][i][0])
+                    #             paths[other_robot] = paths[other_robot][:i] + [static_location] + paths[other_robot][i:]
+                    #         else:
+                    #             static_location = Segment_2(paths[robot][i][0], paths[robot][i][0])
+                    #             paths[robot] = paths[robot][:i+1] + [static_location] + paths[robot][i+1:]
+                    #     print(paths)
+                    #     # import ipdb;ipdb.set_trace()
+
+                    return False
+
+        return True
+
+    def fix_team_collision_robots(self, paths):
+        path_valid = False
+        counter = 0
+        while not path_valid:
+            path_valid = self.fix_robots_collision(paths)
+            counter += 1
+
     def get_turn_robot_paths(self) -> dict:
         """Apparently I should return a dict of paths..."""
         self.preprocess_turn()
 
         paths = self.find_best_path()
+        self.fix_team_collision_robots(paths)
 
         self.postprocess_turn()
 
