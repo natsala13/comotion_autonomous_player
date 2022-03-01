@@ -1,5 +1,4 @@
 import logging
-import itertools
 import numpy as np
 import networkx as nx
 from random import random
@@ -57,33 +56,6 @@ class BonusDistanceHeuristic(AbstractHeuristic):
             not bonus.is_collected)
 
 
-class BruteForceHeuristic(BonusDistanceHeuristic):
-    """This method reveive a list of robots and bonuses, and calculates all exponential possibilities to match
-        This method takes a too big amount of time
-    """
-
-    def brute_search(self, distances):
-        if not distances:
-            return 0
-
-        min_score = 1000
-        for i, robot_bonus in enumerate(distances[0]):
-            my_score = self.brute_search(
-                [[r for j, r in enumerate(bonus) if j != i] for bonus in distances[1:]]) + robot_bonus
-            if my_score < min_score:
-                min_score = my_score
-
-        return min_score
-
-    def pseudo_closest_match(self, robots, bonuses):
-        len_permutations = min(len(bonuses), len(robots))
-        return min([sum([self.distance(robot, bonus) for robot, bonus in zip(robots, bonus_permutations)]) for
-                    bonus_permutations in itertools.permutations(bonuses, len_permutations)])
-
-    def score(self, robots_location, **kwargs):
-        return self.pseudo_closest_match(robots_location, self.bonuses)
-
-
 class TimeDecreasingHeuristic(BonusDistanceHeuristic):
     """ This heuristic receives a list of matches between robots and bonuses and calculate distances times some factors.
     """
@@ -98,48 +70,3 @@ class TimeDecreasingHeuristic(BonusDistanceHeuristic):
         return sum(
             [self.decreasing_score(robot_bonuses_distances[entity], turns) * ENTITY_TO_SCORE[type(entity)] for
              entity in robot_bonuses_distances])
-
-
-class PreProcessingHeuristic(TimeDecreasingHeuristic):
-    def __init__(self, game):
-        super(PreProcessingHeuristic, self).__init__(game)
-        self.prm = None
-        self.bonuses_distances = None
-        self.bonuses_graphs = None
-
-    @staticmethod
-    def distances_to_all_other_bonuses(distances, data):
-        return {bonus: distances[tuple(bonus)] if tuple(bonus) in distances else 1000 for bonus in data.all_entities}
-
-    @staticmethod
-    def paths_to_all_other_bonuses(paths, data):
-        return {bonus: paths[tuple(bonus)] if tuple(bonus) in paths else [] for bonus in data.all_entities}
-
-    def print_distances(self):
-        logging.debug('############# BONUS Distances #################')
-        for bonus in self.bonuses_distances:
-            logging.debug(f'{bonus} - {self.bonuses_distances[bonus]}')
-        logging.debug('###############################################')
-
-    def preprocess(self, prm: Prm) -> None:
-        self.prm = prm
-        data = RobotsData(self.game, None)
-        all_graphs = {bonus: nx.algorithms.shortest_paths.weighted.single_source_dijkstra(prm.graph, tuple(bonus))
-                      for
-                      bonus in data.all_entities}
-
-        self.bonuses_distances = {bonus: self.distances_to_all_other_bonuses(all_graphs[bonus][0], data) for bonus in
-                                  all_graphs}
-
-        self.bonuses_graphs = {bonus: self.paths_to_all_other_bonuses(all_graphs[bonus][1], data) for bonus in
-                               all_graphs}
-
-        self.print_distances()
-
-    def score(self, paths: dict[Robot, Path], turns=3, **kwargs):
-        endpoint_score = sum(
-            [self.decreasing_score(paths[robot].distance_to_goal, turns) * ENTITY_TO_SCORE[type(paths[robot].endpoint)]
-             for robot in paths])
-        extra_score = sum(paths[robot].bonuses for robot in paths) * ENTITY_TO_SCORE[Bonus]
-
-        return endpoint_score + extra_score
