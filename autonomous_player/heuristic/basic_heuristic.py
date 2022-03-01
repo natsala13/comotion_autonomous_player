@@ -136,12 +136,7 @@ class PreProcessingHeuristic(TimeDecreasingHeuristic):
 
         self.print_distances()
 
-    def score(self, robot_bonuses_distances: dict[Entity, float], turns=3, **kwargs):
-        return sum(
-            [self.decreasing_score(robot_bonuses_distances[entity], turns) * ENTITY_TO_SCORE[type(entity)] for
-             entity in robot_bonuses_distances])
-
-    def score2(self, paths: dict[Robot, Path], turns=3, **kwargs):
+    def score(self, paths: dict[Robot, Path], turns=3, **kwargs):
         endpoint_score = sum(
             [self.decreasing_score(paths[robot].distance_to_goal, turns) * ENTITY_TO_SCORE[type(paths[robot].endpoint)]
              for robot in paths])

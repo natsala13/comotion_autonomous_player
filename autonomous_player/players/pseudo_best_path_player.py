@@ -45,7 +45,8 @@ class FocusedPlayer(BasicPlayer):
             for goal in goals:
                 if tuple(goal) in distances:
                     distance_matrix[robot][goal] = distances[tuple(goal)]
-                    graph_per_robot[robot][goal] = Path(paths[tuple(goal)], length=distances[tuple(goal)], endpoint=goal)
+                    graph_per_robot[robot][goal] = Path(paths[tuple(goal)], length=distances[tuple(goal)],
+                                                        endpoint=goal)
                 else:
                     logging.debug(f'goal {goal} is not reachable...')
                     distance_matrix[robot][goal] = 1000  # TODO: Add a path to let us closer to that bonus.
@@ -112,7 +113,8 @@ class FocusedPlayer(BasicPlayer):
         # print('***********************************************************')
 
         for match in all_endpoints:
-            graphs = {robot: graph_per_robot[robot][goal] if goal in graph_per_robot[robot] else Path([]) for robot, goal in
+            graphs = {robot: graph_per_robot[robot][goal] if goal in graph_per_robot[robot] else Path([]) for
+                      robot, goal in
                       zip(graph_per_robot, match)}
 
             fixed_paths, distances = self.fix_path(self.data.robots, match, distance_matrix, graphs, self.game.makespan)
@@ -174,29 +176,25 @@ class FocusedPlayer(BasicPlayer):
         # TODO: State and match refactor names.
         # TODO: Add options for paths in which certain robots don't move.
         # TODO: Check whether issue above makes fixing paths inutil?
-        better_states = {match: self.upgrade_path.upgrade_path_for_best_robot(match,
-                                                                           self.data,
-                                                                           makespan - self.match_length(match,
-                                                                                                        self.data.robots,
-                                                                                                        distance_matrix),
-                                                                           distance_matrix,
-                                                                           graph_per_robot) for match in fixed_actions}
-        profiler.log('Run all greedy searches')
+        pseudo_heuristics = {match: self.upgrade_path.pseudo_heuristic_bonuses_along_match(match,
+                                                                                            self.data,
+                                                                                            makespan - self.match_length(
+                                                                                                match,
+                                                                                                self.data.robots,
+                                                                                                distance_matrix),
+                                                                                            distance_matrix) for match
+                              in fixed_actions}
+        profiler.log('Run all pseudo heuristics')
 
-        for match in better_states:
-            if better_states[match]:
-                for robot in better_states[match]:
-                    fixed_actions[match][robot] = better_states[match][robot]
+        for match in pseudo_heuristics:
+            print(f'{match} - {pseudo_heuristics[match]}')
 
-        # for match in fixed_actions:
-        #     print(f'{match} - {[len(fixed_actions[match][r]) for r in fixed_actions[match]]}')
-
-
-        profiler.log(f'Fix paths after greedy search.')
-
-        heuristic_states = [(self.heuristic.score(fixed_actions[match], self.turn), match)
+        heuristic_states = {match: self.heuristic.score(fixed_actions[match], self.turn) + pseudo_heuristics[match] * BONUS_SCORE
                             for match in
-                            fixed_actions]
+                            fixed_actions}
+
+        for match in heuristic_states:
+            print(f'{match} - {heuristic_states[match]} (Including bonus ({pseudo_heuristics[match]})')
         # print(heuristic_states)
         # print(fixed_actions)
 
@@ -204,27 +202,32 @@ class FocusedPlayer(BasicPlayer):
 
         # print('################ HEURISTIC #################')
         # for score, match in heuristic_states:
-        #     distances_left = self.distance_from_match([distance_matrix[robot][bonus] for robot, bonus in zip(self.data.robots, match)] ,distance_from_endpath_to_bonus_per_match[match])
+        #     distances_left = self.distance_from_match([distance_matrix[robot][bonus] for robot,
+        #     bonus in zip(self.data.robots, match)] ,distance_from_endpath_to_bonus_per_match[match])
         #     print(f'{match} - {distances_left}, score - {score}')
         # print('#############################################')
 
-        best_state = max(heuristic_states, key=lambda x: x[0])[1]
+        best_state = max(heuristic_states, key=lambda k: heuristic_states[k])
         best_graphs = fixed_actions[best_state]
 
-        # my_dists = [distance_matrix[robot][goal] for robot, goal in zip(self.data.robots, best_state)]
+        print(f'##### Chosen match - {best_state}')
+
+        my_dists = [distance_matrix[robot][goal] for robot, goal in zip(self.data.robots, best_state)]
         # import ipdb;ipdb.set_trace(context=10)
-        # stam = self.heuristic.upgrade_path_for_best_robot(best_state,
-        #                                            self.data,
-        #                                            makespan - self.match_length(best_state,
-        #                                                                         self.data.robots,
-        #                                                                         distance_matrix),
-        #                                            distance_matrix,
-        #                                            graph_per_robot)
+        best_graphs_upgrade = self.upgrade_path.upgrade_path_for_best_robot(best_state,
+                                                                           self.data,
+                                                                           makespan - self.match_length(best_state,
+                                                                                                        self.data.robots,
+                                                                                                        distance_matrix),
+                                                                           distance_matrix,
+                                                                           graph_per_robot)
+        if not best_graphs_upgrade:
+            best_graphs_upgrade = best_graphs
 
-        logging.debug(f'Chosen action - {best_state} with heuristic: {max(heuristic_states, key=lambda x: x[0])[0]}')
+        logging.debug(f'Chosen action - {best_state} with heuristic: {heuristic_states[best_state]}')
 
-        paths = {comotion_robot: best_graphs[robot].comotion_path for comotion_robot, robot in
-                 zip(self.robots, best_graphs)}
+        paths = {comotion_robot: best_graphs_upgrade[robot].comotion_path for comotion_robot, robot in
+                 zip(self.robots, best_graphs_upgrade)}
 
         self.equalise_paths_length(paths)
         profiler.log('end bullshit...')

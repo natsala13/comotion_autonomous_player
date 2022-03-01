@@ -1,4 +1,5 @@
 import logging
+import numpy as np
 import networkx as nx
 from typing import Any
 
@@ -35,23 +36,6 @@ class UpgradePath:
                 return bonus, path
 
         return None, None
-
-    def pseudo_heuristic_bonuses_along_path(self, end_bonus: Entity,
-                                            original_distance: float,
-                                            left_distance: float,
-                                            data: RobotsData,
-                                            distances: dict[Bonus, float]) -> int:
-        """Count all bonuses that are in an ellipsoid around start and end point"""
-        deltas_from_path = []
-
-        for bonus in data.bonuses:
-            distance1 = distances[bonus]
-            distance2 = self.bonuses_distances[bonus][end_bonus]
-
-            if distance1 + distance2 <= original_distance + left_distance:
-                deltas_from_path += [distance1 + distance2 - original_distance]
-
-        return len(distances)  # TODO: Better heuristic
 
     def greedy_add_bonuses_up_to_distance(self, starting_location: Entity,
                                           end_bonus: Entity,
@@ -156,3 +140,52 @@ class UpgradePath:
             return {robot: all_fixes[robot] for robot in best_robots}
         else:
             return {}
+
+    def distances_from_focus(self, bonus: Bonus, end_bonus: Entity, distances: dict[Bonus, float]) -> float:
+        return distances[bonus] + self.bonuses_distances[bonus][end_bonus]
+
+    def pseudo_deltas_bonuses_along_path(self, end_bonus: Entity,
+                                         original_distance: float,
+                                         left_distance: float,
+                                         data: RobotsData,
+                                         distances: dict[Bonus, float]) -> dict[Bonus, float]:
+        """Count all bonuses that are in an ellipsoid around start and end point"""
+        # deltas_from_path = {}
+
+        deltas_from_path = {bonus: self.distances_from_focus(bonus, end_bonus, distances) for bonus in data.bonuses if
+                            bonus is not end_bonus}
+        deltas_from_path = {bonus: deltas_from_path[bonus] - original_distance for bonus in deltas_from_path if
+                            deltas_from_path[bonus] < original_distance + left_distance}
+
+        # for bonus in data.bonuses if bonus is not end_bonus:
+        #     total_distance = self.distances_from_focus(bonus, end_bonus, distances)
+        #
+        #     if total_distance <= original_distance + left_distance:
+        #         deltas_from_path[bonus] = total_distance - original_distance
+
+        return deltas_from_path  # TODO: Better heuristic
+
+    def pseudo_heuristic_bonuses_along_match(self, match: [Entity],
+                                             data: RobotsData,
+                                             left_distance: float,
+                                             distances: dict[Robot, dict[Entity, float]]) -> float:
+
+        deltas_per_robot = [
+            self.pseudo_deltas_bonuses_along_path(robot_match, distances[robot][robot_match], left_distance, data,
+                                                  {b: distances[robot][b] for b in data.bonuses}) for robot, robot_match
+            in zip(data.robots, match)]
+
+        # for robot, path, goal in zip(data.robots, deltas_per_robot, match):
+        #     print(f'Path from {robot} to {goal}, containing {path}')
+
+        # import ipdb;ipdb.set_trace()
+
+
+        pseudo_deltas = {bonus: [deltas[bonus] for deltas in deltas_per_robot if bonus in deltas] for bonus in
+                         data.bonuses}
+        pseudo_deltas = {bonus: pseudo_deltas[bonus] for bonus in pseudo_deltas if pseudo_deltas[bonus]}
+
+        pseudo_min_deltas = [min(pseudo_deltas[deltas]) for deltas in pseudo_deltas]
+        pseudo_min_deltas = pseudo_min_deltas if pseudo_min_deltas else 0
+        # TODO: Prioritise shorter paths
+        return min(left_distance / np.mean(pseudo_min_deltas), len(pseudo_deltas))
