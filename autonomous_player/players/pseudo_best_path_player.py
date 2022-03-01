@@ -19,7 +19,10 @@ from autonomous_player.heuristic.preprocessing_heuristic import PreProcessingHeu
 from autonomous_player.utils.utils import Point, Segment, Bonus, Goal, Entity, Robot, Path, l2_norm
 
 
-class FocusedPlayer(BasicPlayer):
+class PseudoFocusedPlayer(BasicPlayer):
+    """This player look at every possible match between robots and enpoints, claulate a pseudo bonus collection
+     for each, thhen chose the best one accordinf to end point goal and pseudo bonuses potentially collectable
+      on the road, and using this best match look for the best path for every robot."""
 
     def __init__(self, player_id, num_samples=1500, k_nearest=15, **kwargs):
         super(FocusedPlayer, self).__init__(player_id, num_samples, k_nearest, PreProcessingHeuristic)

@@ -1,4 +1,18 @@
 # New autonomous player library
+This is Nathan's autonomous player.
+## Player strategy
+In order to find the best path in every turn,
+the player will first look for the best match between robots and goals (bonuses / circles)
+for every match a heuristic will be computed taking in charge the path's length,
+the end goal, and a pseudo assumption of all bonuses along the road.
+using this heuristic the best match will be chosen.
+having a match between robots and end goals, a path will be computed between every robot
+to its goal using a greedy algorithm in order to add as many bonuses as possible
+along the road without breaking the makespan limit.
+Paths between points are computed using Dijkestra on a Prm map constructed on the
+beginning of the game while every turn opponent robots' locations are removed and re-added
+at the end of the turn. In addition, every turn, paths creating collisions between friendly
+robots, are trimmed according to a collision if existing.
 
 ## Issues
 - [x] prm module
