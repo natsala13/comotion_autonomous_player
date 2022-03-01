@@ -14,6 +14,15 @@ beginning of the game while every turn opponent robots' locations are removed an
 at the end of the turn. In addition, every turn, paths creating collisions between friendly
 robots, are trimmed according to a collision if existing.
 
+## Classes
+* algorithms - contain usefull algos such as prm, greedy bonuses collector etc.
+* autonomous_gmae - DEV a module helping the tests simulating a Comotion game
+* heuristic - different heuristics estimating the value of a match
+* players - different autonomous players - The chosen one pseudo_best_path_player
+* plotter - DEV a helper module in order to plot graphs while debugging.
+* utils - helper classes.
+* tests - tests for the autonomous player's code plus simulation of games using config files.
+
 ## Issues
 - [x] prm module
 - [x] heuristic library
