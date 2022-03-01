@@ -39,7 +39,9 @@ class Goal(AbstractEntity):
 
 
 class Robot(Point):
-    pass
+    @classmethod
+    def robot_from_comotion(cls, robot):
+        return cls(robot.location.x().to_double(), robot.location.y().to_double())
 
 
 Entity = Union[Bonus, Goal]

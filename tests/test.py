@@ -23,7 +23,7 @@ from autonomous_player.utils import utils
 from autonomous_player.algorithms.prm import Prm
 from autonomous_player.plotter import plotter
 from autonomous_player.autonomous_game.game import Game
-from autonomous_player.heuristic.basic_heuristic import BonusDistanceHeuristic, BruteForceHeuristic
+from autonomous_player.heuristic.basic_heuristic import BonusDistanceHeuristic
 
 
 def load_config(config_file: str) -> dict:

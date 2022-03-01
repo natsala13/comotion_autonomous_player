@@ -10,18 +10,19 @@ import matplotlib.pyplot as plt
 from bindings import Segment_2, Point_2
 from coMotion.game.comotion_player import CoMotion_Robot
 
-from autonomous_player.algorithms.greedy_upgrade_path import UpgradePath
 from autonomous_player.plotter import plotter
 from autonomous_player.utils.profiler import Profiler
 from autonomous_player.players.basic_player import BasicPlayer
 from autonomous_player.heuristic.basic_heuristic import BONUS_SCORE
+from autonomous_player.algorithms.greedy_upgrade_path import UpgradePath
+from autonomous_player.heuristic.preprocessing_heuristic import PreProcessingHeuristic
 from autonomous_player.utils.utils import Point, Segment, Bonus, Goal, Entity, Robot, Path, l2_norm
 
 
 class FocusedPlayer(BasicPlayer):
 
-    def __init__(self, player_id, num_samples, k_nearest=15, **kwargs):
-        super(FocusedPlayer, self).__init__(player_id, num_samples, k_nearest, 'PreProcessingHeuristic')
+    def __init__(self, player_id, num_samples=1500, k_nearest=15, **kwargs):
+        super(FocusedPlayer, self).__init__(player_id, num_samples, k_nearest, PreProcessingHeuristic)
         self.upgrade_path = None
 
     def preprocess(self):
@@ -186,26 +187,14 @@ class FocusedPlayer(BasicPlayer):
                               in fixed_actions}
         profiler.log('Run all pseudo heuristics')
 
-        for match in pseudo_heuristics:
-            print(f'{match} - {pseudo_heuristics[match]}')
-
         heuristic_states = {match: self.heuristic.score(fixed_actions[match], self.turn) + pseudo_heuristics[match] * BONUS_SCORE
                             for match in
                             fixed_actions}
 
-        for match in heuristic_states:
-            print(f'{match} - {heuristic_states[match]} (Including bonus ({pseudo_heuristics[match]})')
-        # print(heuristic_states)
-        # print(fixed_actions)
+        # for match in heuristic_states:
+        #     print(f'{match} - {heuristic_states[match]} (Including bonus ({pseudo_heuristics[match]})')
 
         profiler.log('heuristic all states')
-
-        # print('################ HEURISTIC #################')
-        # for score, match in heuristic_states:
-        #     distances_left = self.distance_from_match([distance_matrix[robot][bonus] for robot,
-        #     bonus in zip(self.data.robots, match)] ,distance_from_endpath_to_bonus_per_match[match])
-        #     print(f'{match} - {distances_left}, score - {score}')
-        # print('#############################################')
 
         best_state = max(heuristic_states, key=lambda k: heuristic_states[k])
         best_graphs = fixed_actions[best_state]
@@ -213,7 +202,6 @@ class FocusedPlayer(BasicPlayer):
         print(f'##### Chosen match - {best_state}')
 
         my_dists = [distance_matrix[robot][goal] for robot, goal in zip(self.data.robots, best_state)]
-        # import ipdb;ipdb.set_trace(context=10)
         best_graphs_upgrade = self.upgrade_path.upgrade_path_for_best_robot(best_state,
                                                                            self.data,
                                                                            makespan - self.match_length(best_state,
@@ -221,17 +209,17 @@ class FocusedPlayer(BasicPlayer):
                                                                                                         distance_matrix),
                                                                            distance_matrix,
                                                                            graph_per_robot)
-        if not best_graphs_upgrade:
-            best_graphs_upgrade = best_graphs
+
+        for robot in best_graphs_upgrade:
+            best_graphs[robot] = best_graphs_upgrade[robot]
 
         logging.debug(f'Chosen action - {best_state} with heuristic: {heuristic_states[best_state]}')
 
-        paths = {comotion_robot: best_graphs_upgrade[robot].comotion_path for comotion_robot, robot in
-                 zip(self.robots, best_graphs_upgrade)}
+        paths = {comotion_robot: best_graphs[robot].comotion_path for comotion_robot, robot in
+                 zip(self.robots, best_graphs)}
 
         self.equalise_paths_length(paths)
         profiler.log('end bullshit...')
         profiler.total()
 
-        # print(paths)
         return paths

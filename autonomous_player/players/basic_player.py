@@ -1,15 +1,15 @@
 import logging
 
-from bindings import Segment_2, Point_2
+from bindings import Segment_2, Point_2, FT
 from coMotion.game.comotion_player import CoMotion_Player
 import geometry_utils.collision_detection as collision_detection
 
 from autonomous_player.utils import utils
 from autonomous_player.algorithms.prm import Prm
 from autonomous_player.plotter import plotter
-from autonomous_player.heuristic import basic_heuristic
+from autonomous_player.heuristic.basic_heuristic import BonusDistanceHeuristic
 from autonomous_player.utils.robot_data import RobotsData
-from autonomous_player.utils.utils import Point, Segment, Bonus, Goal, Entity
+from autonomous_player.utils.utils import Point, Segment, Bonus, Goal, Entity, Robot
 
 
 class BasicPlayer(CoMotion_Player):
@@ -18,7 +18,7 @@ class BasicPlayer(CoMotion_Player):
     This is meant only as a test/example to how true logic should work.
     """
 
-    def __init__(self, player_id, num_samples, k_nearest=15, heuristic_class='BonusDistanceHeuristic'):
+    def __init__(self, player_id, num_samples=1500, k_nearest=15, heuristic_class=BonusDistanceHeuristic):
         super().__init__(player_id)
 
         # Store a (static) probabilistic roadmap of the scene
@@ -28,7 +28,7 @@ class BasicPlayer(CoMotion_Player):
         self.num_landmarks = int(num_samples)
         # game is inited once attach game is called. I would prefer it here on init...
 
-        self.heuristic_class = getattr(basic_heuristic, heuristic_class)
+        self.heuristic_class = heuristic_class
         self.heuristic = None
 
         self.data: RobotsData = None
@@ -94,9 +94,5 @@ class BasicPlayer(CoMotion_Player):
         paths = self.find_best_path()
 
         self.postprocess_turn()
-
-        logging.debug('################ POST PROCESS #################')
-        logging.debug(paths)
-        logging.debug('###############################################')
 
         return paths

@@ -175,7 +175,7 @@ class UpgradePath:
                                                   {b: distances[robot][b] for b in data.bonuses}) for robot, robot_match
             in zip(data.robots, match)]
 
-        # for robot, path, goal in zip(data.robots, deltas_per_robot, match):
+            # for robot, path, goal in zip(data.robots, deltas_per_robot, match):
         #     print(f'Path from {robot} to {goal}, containing {path}')
 
         # import ipdb;ipdb.set_trace()
@@ -188,4 +188,8 @@ class UpgradePath:
         pseudo_min_deltas = [min(pseudo_deltas[deltas]) for deltas in pseudo_deltas]
         pseudo_min_deltas = pseudo_min_deltas if pseudo_min_deltas else 0
         # TODO: Prioritise shorter paths
+
+        if np.mean(pseudo_min_deltas) == 0:
+            return 0
+
         return min(left_distance / np.mean(pseudo_min_deltas), len(pseudo_deltas))
